@@ -209,7 +209,7 @@
   <div id="page-landing">
     <nav class="nav">
       <div class="nav-logo">PROJECT SOLOMON<span>LAND OF WIT</span></div>
-      <a href="#" class="nav-btn" onclick="showSetup();return false;">⚙ Setup</a>
+      <!-- Setup button hidden - teacher access only via password -->
     </nav>
     <section class="hero">
       <div class="float-deco" style="top:15%;left:7%;animation-delay:0s;">⚔️</div>
@@ -223,10 +223,7 @@
       <div class="at-divider"></div>
       <p class="at-tagline">Where Every Lesson is an Epic Adventure in the Land of Wit</p>
 
-      <div id="api-hint" class="setup-hint hidden">
-        ⚠ Google Sheets not configured — ask your teacher to set the API!
-        <a href="#" onclick="showSetup();return false;"> Configure here</a>
-      </div>
+<div id="api-hint" class="setup-hint hidden" style="display:none!important;"></div>
 
       <a href="#" class="cta-btn" onclick="goToRoleSelect();return false;">
         Click here to start gaining wisdom <span class="cta-arrow">→</span>
@@ -287,9 +284,7 @@
              onkeydown="if(event.key==='Enter')submitTeacherLogin()"/>
       <div id="teacher-login-error" class="err-msg hidden"></div>
       <button class="btn btn-cyan btn-block" onclick="submitTeacherLogin()">Enter Command Tower ⚡</button>
-      <p style="text-align:center;margin-top:1rem;font-size:.78rem;color:#7a6090;">
-        Forgot password? <a href="#" onclick="closeModal('teacher-login-modal');showSetup();return false;" style="color:#00aaff;">Reset in Setup ⚙</a>
-      </p>
+
     </div>
   </div>
 
@@ -373,27 +368,18 @@
 
     /* ── TEACHER LOGIN ── */
     function goToTeacher() {
-      const pw = localStorage.getItem('solomon_teacher_pw');
-      if (pw && pw.trim() !== '') {
-        // Password is set — show login modal
-        document.getElementById('teacher-login-pw').value = '';
-        document.getElementById('teacher-login-error').classList.add('hidden');
-        // Show "password is set" badge so teacher knows it's ready
-        document.getElementById('pw-set-badge').classList.remove('hidden');
-        document.getElementById('teacher-login-modal').classList.add('active');
-        setTimeout(() => document.getElementById('teacher-login-pw').focus(), 150);
-      } else {
-        // No password configured — go straight to teacher panel
-        setSession({ role: 'teacher' });
-        window.location.href = 'teacher.html';
-      }
+      // Always require password — it is permanently 'solomonwisdom'
+      document.getElementById('teacher-login-pw').value = '';
+      document.getElementById('teacher-login-error').classList.add('hidden');
+      document.getElementById('pw-set-badge').classList.remove('hidden');
+      document.getElementById('teacher-login-modal').classList.add('active');
+      setTimeout(() => document.getElementById('teacher-login-pw').focus(), 150);
     }
 
     function submitTeacherLogin() {
-      const storedPw  = localStorage.getItem('solomon_teacher_pw') || '';
-      const entered   = (document.getElementById('teacher-login-pw').value || '').trim();
-      const storedTrim = storedPw.trim();
-      const errEl     = document.getElementById('teacher-login-error');
+      const TEACHER_PASSWORD = 'solomonwisdom';
+      const entered = (document.getElementById('teacher-login-pw').value || '').trim();
+      const errEl   = document.getElementById('teacher-login-error');
 
       if (!entered) {
         errEl.textContent = '⚠ Please type your password first.';
@@ -401,14 +387,12 @@
         return;
       }
 
-      if (entered === storedTrim) {
-        // ✅ CORRECT
+      if (entered === TEACHER_PASSWORD) {
         errEl.classList.add('hidden');
         setSession({ role: 'teacher' });
         closeModal('teacher-login-modal');
         window.location.href = 'teacher.html';
       } else {
-        // ❌ WRONG
         errEl.textContent = '✕ Incorrect password. Try again.';
         errEl.classList.remove('hidden');
         document.getElementById('teacher-login-pw').value = '';
@@ -472,6 +456,8 @@
     });
 
     /* ── INIT ── */
+    // Hardcode teacher password permanently
+    localStorage.setItem('solomon_teacher_pw', 'solomonwisdom');
     checkApiConfig();
   </script>
 </body>

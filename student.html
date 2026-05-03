@@ -368,6 +368,46 @@ function closeModal(id){document.getElementById(id).classList.remove('active');}
 
 let currentStudent=null,selectedAvatar=null,regData={};
 
+/* ── AVATARS (defined here so they always work even if app.js loads slowly) ── */
+const _AVATARS_LOCAL=[
+  {id:'finn',emoji:'⚔️',label:'Finn',universe:'Ooo Heroes'},
+  {id:'jake',emoji:'🐶',label:'Jake',universe:'Ooo Heroes'},
+  {id:'bmo',emoji:'🎮',label:'BMO',universe:'Ooo Heroes'},
+  {id:'pb',emoji:'🍬',label:'Princess B',universe:'Ooo Heroes'},
+  {id:'marceline',emoji:'🎸',label:'Marceline',universe:'Ooo Heroes'},
+  {id:'iceking',emoji:'❄️',label:'Ice King',universe:'Ooo Heroes'},
+  {id:'flame',emoji:'🔥',label:'Flame P.',universe:'Ooo Heroes'},
+  {id:'tree',emoji:'🌳',label:'Tree Trunks',universe:'Ooo Heroes'},
+  {id:'gunter',emoji:'🐧',label:'Gunter',universe:'Ooo Heroes'},
+  {id:'pika',emoji:'⚡',label:'Zappix',universe:'Pokéverse'},
+  {id:'bulb',emoji:'🌿',label:'Leaflet',universe:'Pokéverse'},
+  {id:'char',emoji:'🔥',label:'Pyron',universe:'Pokéverse'},
+  {id:'squi',emoji:'💧',label:'Aquor',universe:'Pokéverse'},
+  {id:'mew',emoji:'🌟',label:'Mystix',universe:'Pokéverse'},
+  {id:'el',emoji:'🔮',label:'Psionica',universe:'Upside Down'},
+  {id:'will',emoji:'🎮',label:'Gamewarden',universe:'Upside Down'},
+  {id:'demo',emoji:'🌑',label:'Shadewing',universe:'Upside Down'},
+  {id:'max',emoji:'🎧',label:'Beatrix',universe:'Upside Down'},
+  {id:'hop',emoji:'🛡️',label:'Ironkeep',universe:'Upside Down'},
+  {id:'hp',emoji:'⚡',label:'Thundermark',universe:'Wizardlands'},
+  {id:'herm',emoji:'📚',label:'Scholara',universe:'Wizardlands'},
+  {id:'ron',emoji:'♟️',label:'Strategos',universe:'Wizardlands'},
+  {id:'luna',emoji:'🌙',label:'Lunara',universe:'Wizardlands'},
+  {id:'nev',emoji:'🌱',label:'Bloomcaster',universe:'Wizardlands'},
+  {id:'nar',emoji:'🍜',label:'Rasenwave',universe:'Shinobi Realm'},
+  {id:'sas',emoji:'⚡',label:'Sharinkai',universe:'Shinobi Realm'},
+  {id:'sak',emoji:'💪',label:'Forceblossom',universe:'Shinobi Realm'},
+  {id:'kak',emoji:'👁️',label:'Veilmaster',universe:'Shinobi Realm'},
+  {id:'rock',emoji:'🥊',label:'Hardstone',universe:'Shinobi Realm'},
+  {id:'anya',emoji:'🧠',label:'Mindreader',universe:'Strix Division'},
+  {id:'loid',emoji:'🎭',label:'Phantom',universe:'Strix Division'},
+  {id:'yor',emoji:'🌸',label:'Thornrose',universe:'Strix Division'},
+  {id:'bond',emoji:'🐾',label:'Futures',universe:'Strix Division'},
+  {id:'frank',emoji:'🔍',label:'Watcher',universe:'Strix Division'},
+];
+function _getAvatarList(){ return (typeof AVATARS!=='undefined'&&AVATARS.length)?AVATARS:_AVATARS_LOCAL; }
+function _getAvatarById(id){ return _getAvatarList().find(a=>a.id===id)||_getAvatarList()[0]; }
+
 function showView(name){['register','login','pending','dashboard'].forEach(v=>{const el=document.getElementById('view-'+v);if(el)el.classList.add('hidden');});const t=document.getElementById('view-'+name);if(t)t.classList.remove('hidden');}
 function showLogin(){showView('login');}
 function showRegister(){showView('register');}
@@ -412,11 +452,18 @@ function goToAvatarStep(){
 function backToStep1(){document.getElementById('reg-step-2').classList.add('hidden');document.getElementById('reg-step-1').classList.remove('hidden');}
 function renderAvatarGrid(universe){
   const grid=document.getElementById('avatar-grid');
-  const avs=universe==='all'?AVATARS:AVATARS.filter(a=>a.universe===universe);
-  grid.innerHTML=avs.map(a=>`<div class="avatar-option ${selectedAvatar?.id===a.id?'selected':''}" onclick="selectAvatar('${a.id}',this)"><div style="font-size:2rem;">${a.emoji}</div><span class="avatar-label">${a.label}</span></div>`).join('');
+  if(!grid){console.error('avatar-grid not found');return;}
+  const list=_getAvatarList();
+  const avs=universe==='all'?list:list.filter(a=>a.universe===universe);
+  if(!avs.length){grid.innerHTML='<p style="color:#c9b8e8;text-align:center;padding:1rem;">No avatars in this universe.</p>';return;}
+  grid.innerHTML=avs.map(a=>`
+    <div class="avatar-option ${selectedAvatar?.id===a.id?'selected':''}" onclick="selectAvatar('${a.id}',this)" style="background:rgba(74,14,143,.25);border:2px solid rgba(0,170,255,.2);border-radius:12px;padding:.6rem .4rem;text-align:center;cursor:pointer;transition:all .25s;">
+      <div style="font-size:2rem;line-height:1.2;">${a.emoji}</div>
+      <span style="font-size:.6rem;font-weight:800;color:#c9b8e8;margin-top:.25rem;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.label}</span>
+    </div>`).join('');
 }
 function filterUniverse(u,btn){document.querySelectorAll('#universe-filter .btn').forEach(b=>b.classList.remove('active-u'));btn.classList.add('active-u');renderAvatarGrid(u);}
-function selectAvatar(id,el){selectedAvatar=getAvatarById(id);document.querySelectorAll('.avatar-option').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');}
+function selectAvatar(id,el){selectedAvatar=_getAvatarById(id);document.querySelectorAll('.avatar-option').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');showToast('Champion selected: '+selectedAvatar.label+' '+selectedAvatar.emoji,'success');}
 async function completeRegistration(){
   if(!selectedAvatar){showToast('Choose a champion first!','error');return;}
   const btn=document.querySelector('#reg-step-2 .btn-gold');btn.textContent='⚔️ Registering...';btn.disabled=true;
@@ -430,7 +477,7 @@ async function completeRegistration(){
 }
 
 function renderProfileBanner(){
-  const av=getAvatarById(currentStudent.avatar);const level=getLevel(parseInt(currentStudent.xp)||0);
+  const av=_getAvatarById(currentStudent.avatar);const level=(typeof getLevel==="function")?getLevel(parseInt(currentStudent.xp)||0):{label:"Novice Hero",next:100,progress:0};
   document.getElementById('profile-banner').innerHTML=`
     <div class="profile-avatar-lg">${av.emoji}</div>
     <div style="flex:1;">
@@ -561,7 +608,7 @@ async function openLootBag(){
 }
 
 function renderProfile(){
-  const av=getAvatarById(currentStudent.avatar),level=getLevel(parseInt(currentStudent.xp)||0);
+  const av=_getAvatarById(currentStudent.avatar),level=(typeof getLevel==="function")?getLevel(parseInt(currentStudent.xp)||0):{label:"Novice Hero",next:100,progress:0};
   document.getElementById('profile-content').innerHTML=`<div class="glass-card" style="max-width:480px;"><div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;"><div class="profile-avatar-lg" style="width:90px;height:90px;font-size:3rem;">${av.emoji}</div><div><h3 style="font-family:'Fredoka One',cursive;font-size:1.2rem;">${currentStudent.name}</h3><p style="color:#c9b8e8;font-size:.82rem;font-weight:700;">Class ${currentStudent.section}</p><p style="color:#ffd700;font-size:.82rem;margin-top:.25rem;font-weight:800;">⭐ ${level.label}</p></div></div><div class="form-group"><p class="form-label">Champion</p><p style="font-weight:700;">${av.emoji} ${av.label} — ${av.universe}</p></div><div class="form-group"><p class="form-label">Email</p><p style="font-weight:700;">${currentStudent.email}</p></div><div class="form-group"><p class="form-label">Total XP</p><p style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:#00aaff;">${currentStudent.xp||0} XP</p></div><div class="form-group"><p class="form-label">Loot Bags</p><p style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:#ffd700;">${currentStudent.lootBags||0} 🎁</p></div></div>`;
 }
 
