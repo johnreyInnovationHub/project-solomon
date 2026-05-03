@@ -566,7 +566,7 @@
     async function approveStudent(email) {
       bustStudentCache(email);
       await updateStudent(email, { status: 'approved' });
-      showToast('Hero blessed! Mathematical! ⚡', 'success');
+      showToast('Hero blessed! Excellence is a Habit! ⚡', 'success');
       renderEnrollment(); renderOverview();
     }
     async function rejectStudent(email) {
