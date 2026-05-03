@@ -456,7 +456,8 @@
     });
 
     /* ── INIT ── */
-    // Hardcode teacher password permanently
+    // FORCE clear any old stale password and set the permanent one
+    localStorage.removeItem('solomon_teacher_pw');
     localStorage.setItem('solomon_teacher_pw', 'solomonwisdom');
     checkApiConfig();
   </script>

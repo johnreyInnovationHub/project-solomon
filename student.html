@@ -466,14 +466,32 @@ function filterUniverse(u,btn){document.querySelectorAll('#universe-filter .btn'
 function selectAvatar(id,el){selectedAvatar=_getAvatarById(id);document.querySelectorAll('.avatar-option').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');showToast('Champion selected: '+selectedAvatar.label+' '+selectedAvatar.emoji,'success');}
 async function completeRegistration(){
   if(!selectedAvatar){showToast('Choose a champion first!','error');return;}
-  const btn=document.querySelector('#reg-step-2 .btn-gold');btn.textContent='⚔️ Registering...';btn.disabled=true;
-  const result=await saveStudent({...regData,avatar:selectedAvatar.id});
-  btn.textContent='⚔️ Begin Quest!';btn.disabled=false;
-  if(!result.ok){showToast(result.error,'error');return;}
-  setSession({role:'student',email:regData.email});
-  showToast('Quest application submitted! Awaiting wizard approval 🧙','success');
-  currentStudent=getCachedStudent(regData.email)||{...regData,avatar:selectedAvatar.id,status:'pending',xp:0,lootBags:0};
-  showView('pending');
+  const btn=document.querySelector('#reg-step-2 .btn-gold');
+  btn.textContent='⚔️ Registering...'; btn.disabled=true;
+  try {
+    const result = await saveStudent({...regData, avatar:selectedAvatar.id});
+    if(!result.ok){
+      btn.textContent='⚔️ Begin Quest!'; btn.disabled=false;
+      showToast(result.error||'Registration failed. Try again.','error');
+      return;
+    }
+    setSession({role:'student', email:regData.email});
+    // Build local student object immediately — don't wait for Sheets
+    currentStudent = {
+      ...regData,
+      avatar: selectedAvatar.id,
+      status: 'pending',
+      xp: 0,
+      lootBags: 0,
+      createdAt: new Date().toISOString()
+    };
+    showToast('Quest application submitted! Awaiting wizard approval 🧙','success');
+    showView('pending');
+  } catch(err) {
+    btn.textContent='⚔️ Begin Quest!'; btn.disabled=false;
+    showToast('Something went wrong. Please try again.','error');
+    console.error('Registration error:', err);
+  }
 }
 
 function renderProfileBanner(){

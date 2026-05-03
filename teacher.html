@@ -550,12 +550,15 @@
       }
     })();
 
-    // Auth gate — password is always 'solomonwisdom'
+    // Auth gate — password is permanently 'solomonwisdom'
     (function() {
+      // Force-set the correct password, clearing any stale value
+      localStorage.removeItem('solomon_teacher_pw');
+      localStorage.setItem('solomon_teacher_pw', 'solomonwisdom');
+
       const s = getSession();
       const gate = document.getElementById('teacher-gate');
       if (!s || s.role !== 'teacher') {
-        // Always show the gate — password is required
         gate.style.display = 'flex';
         setTimeout(() => document.getElementById('gate-pw').focus(), 100);
       } else {
