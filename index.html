@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Solomon — Land of Ooo</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ── LANDING SPECIFIC ── */
+    .at-title-wrap {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 1rem;
+    }
+
+    .at-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.4em;
+      color: var(--bmo-teal);
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      opacity: 0.85;
+    }
+
+    .at-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(3.5rem, 10vw, 7.5rem);
+      line-height: 0.95;
+      letter-spacing: 0.03em;
+      background: linear-gradient(135deg, #fffde7 0%, #00aaff 40%, #ff69b4 80%, #ffd700 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 0;
+      filter: drop-shadow(0 4px 20px rgba(0,170,255,0.4));
+    }
+
+    .at-subtitle {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(1rem, 3vw, 1.6rem);
+      letter-spacing: 0.12em;
+      color: var(--jake-yellow);
+      text-shadow: 0 0 30px rgba(255,215,0,0.6);
+      margin-top: 0.5rem;
+    }
+
+    .at-divider {
+      width: 100px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--finn-blue), var(--princess-pink), transparent);
+      margin: 1.5rem auto;
+      border-radius: 3px;
+    }
+
+    .at-tagline {
+      font-family: 'Nunito', sans-serif;
+      font-size: clamp(0.95rem, 2.5vw, 1.2rem);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      max-width: 460px;
+      line-height: 1.6;
+    }
+
+    .at-cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.1rem 2.8rem;
+      background: linear-gradient(135deg, var(--finn-blue), #0055aa, var(--princess-pink));
+      background-size: 200% 200%;
+      animation: btnGradient 4s ease infinite;
+      color: white;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.3rem;
+      letter-spacing: 0.06em;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      margin-top: 2rem;
+      box-shadow: 0 8px 40px rgba(0,170,255,0.5), 0 0 0 0 rgba(0,170,255,0.4);
+      animation: btnGradient 4s ease infinite, btnPulse 2.5s ease-in-out infinite;
+      transition: transform 0.2s;
+    }
+    .at-cta-btn:hover { transform: scale(1.06) translateY(-2px); }
+
+    @keyframes btnGradient {
+      0%,100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    @keyframes btnPulse {
+      0%,100% { box-shadow: 0 8px 40px rgba(0,170,255,0.5), 0 0 0 0 rgba(0,170,255,0.3); }
+      50% { box-shadow: 0 8px 50px rgba(0,170,255,0.7), 0 0 0 12px rgba(0,170,255,0); }
+    }
+
+    .cta-arrow { font-size: 1.4rem; animation: arrowBounce 1.5s ease-in-out infinite; }
+    @keyframes arrowBounce {
+      0%,100%{transform:translateX(0)} 50%{transform:translateX(6px)}
+    }
+
+    /* ── FLOATING CHARACTERS ── */
+    .float-finn {
+      position: absolute;
+      font-size: 4rem;
+      animation: floatChar 5s ease-in-out infinite;
+      pointer-events: none;
+      opacity: 0.2;
+      filter: blur(1px);
+    }
+    @keyframes floatChar {
+      0%,100%{transform:translateY(0) rotate(-5deg)} 50%{transform:translateY(-20px) rotate(5deg)}
+    }
+
+    /* ── ROLE SELECTION PAGE ── */
+    #page-role { display: none; }
+    #page-role.active { display: flex; }
+
+    .role-select-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .role-select-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      background: linear-gradient(135deg, var(--text-primary), var(--finn-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .auth-tab-bar {
+      display: flex;
+      gap: 0.5rem;
+      background: rgba(0,0,0,0.4);
+      padding: 0.4rem;
+      border-radius: 50px;
+      border: 2px solid var(--glass-border);
+      margin: 1.5rem auto;
+      width: fit-content;
+    }
+    .auth-tab {
+      padding: 0.5rem 1.5rem;
+      border-radius: 50px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .auth-tab.active {
+      background: linear-gradient(135deg, rgba(0,170,255,0.25), rgba(0,85,170,0.25));
+      color: var(--finn-blue);
+      border: 1px solid rgba(0,170,255,0.4);
+    }
+
+    /* ══ SETUP HINT ══ */
+    .setup-hint {
+      background: rgba(255,215,0,0.08);
+      border: 2px solid rgba(255,215,0,0.3);
+      border-radius: 14px;
+      padding: 0.85rem 1.5rem;
+      max-width: 480px;
+      margin: 0 auto 1.5rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--jake-yellow);
+      text-align: center;
+    }
+    .setup-hint a { color: var(--finn-blue); }
+
+    /* ══ FEATURES PILLS ══ */
+    .features {
+      display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;
+      margin: 1.5rem auto 0;
+      max-width: 700px;
+    }
+    .feature-pill {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.45rem 1rem;
+      background: var(--glass-bg);
+      border: 2px solid var(--glass-border);
+      border-radius: 50px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .byline {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 2.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="ooo-bg"></div>
+  <div class="hills-deco"></div>
+
+  <!-- PAGE 1: LANDING -->
+  <div id="page-landing" class="page">
+    <nav class="nav">
+      <div class="nav-logo">
+        PROJECT SOLOMON
+        <span>LAND OF OOO LEARNING</span>
+      </div>
+      <div class="nav-links">
+        <a href="#" class="nav-btn" onclick="showSetup()">⚙ Setup</a>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <!-- Floating deco characters -->
+      <div class="float-finn" style="top:15%;left:8%;animation-delay:0s;">⚔️</div>
+      <div class="float-finn" style="top:20%;right:8%;animation-delay:1.5s;font-size:3rem;">🐶</div>
+      <div class="float-finn" style="bottom:25%;left:5%;animation-delay:2.5s;font-size:2.5rem;">🌿</div>
+      <div class="float-finn" style="bottom:20%;right:6%;animation-delay:1s;font-size:3.5rem;">❄️</div>
+
+      <div class="at-title-wrap">
+        <p class="at-eyebrow">✦ mathematical! ✦</p>
+        <h1 class="at-title">PROJECT</h1>
+        <h1 class="at-title">SOLOMON</h1>
+        <div class="at-divider"></div>
+        <p class="at-tagline">Where Every Lesson is an Epic Adventure in the Land of Ooo</p>
+      </div>
+
+      <div id="api-hint" class="setup-hint hidden">
+        ⚠ Google Sheets not configured — ask your teacher to set the API!
+        <a href="#" onclick="showSetup()"> Configure here</a>
+      </div>
+
+      <a href="#" class="at-cta-btn" onclick="goToRoleSelect()">
+        Click here to start gaining wisdom
+        <span class="cta-arrow">→</span>
+      </a>
+
+      <div class="features">
+        <div class="feature-pill"><span>🗺️</span> Adventure Lessons</div>
+        <div class="feature-pill"><span>🐦</span> Training Camp</div>
+        <div class="feature-pill"><span>🏟️</span> Arena Battles</div>
+        <div class="feature-pill"><span>🏆</span> XP & Leveling</div>
+        <div class="feature-pill"><span>📊</span> Google Sheets</div>
+      </div>
+
+      <p class="byline">PROJECT SOLOMON · DEVELOPED BY J.OPONG · v2.0 ADVENTURE TIME EDITION</p>
+    </section>
+  </div>
+
+  <!-- PAGE 2: ROLE SELECTION -->
+  <div id="page-role" class="page" style="display:none;">
+    <nav class="nav">
+      <div class="nav-logo">
+        PROJECT SOLOMON
+        <span>LAND OF OOO LEARNING</span>
+      </div>
+      <div class="nav-links">
+        <a href="#" class="nav-btn" onclick="backToLanding()">← Back</a>
+      </div>
+    </nav>
+
+    <div class="role-select-wrap">
+      <p style="font-size:3rem;margin-bottom:0.5rem;">🏰</p>
+      <h2 class="role-select-title">Choose Your Path, Hero!</h2>
+      <p class="section-sub">Sign in or register as a Teacher or Student</p>
+
+      <div style="margin-top:2.5rem;display:flex;gap:1.5rem;flex-wrap:wrap;justify-content:center;">
+        <div class="role-card teacher" onclick="goToTeacher()">
+          <span class="role-icon">🧙</span>
+          <div class="role-title" style="color:var(--finn-blue);">TEACHER</div>
+          <div class="role-desc">Deploy adventures, manage heroes, and watch your students conquer the Land of Ooo.</div>
+          <br>
+          <span class="badge badge-cyan">WIZARD ACCESS</span>
+        </div>
+        <div class="role-card student" onclick="goToStudent()">
+          <span class="role-icon">⚔️</span>
+          <div class="role-title" style="color:var(--princess-pink);">STUDENT</div>
+          <div class="role-desc">Embark on quests, train hard, and battle your way to glory in the arena!</div>
+          <br>
+          <span class="badge badge-magenta">HERO ACCESS</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teacher Login Modal -->
+  <div class="modal-overlay" id="teacher-login-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('teacher-login-modal')">✕</button>
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="font-size:3rem;margin-bottom:0.5rem;">🧙</div>
+        <h2 class="section-title" style="font-size:1.2rem;">Wizard Access</h2>
+        <p style="font-size:0.82rem;color:var(--text-secondary);margin-top:0.25rem;font-weight:600;">Enter your magic password to enter the Command Tower</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="teacher-login-pw" class="form-control" placeholder="Enter teacher password" onkeydown="if(event.key==='Enter')submitTeacherLogin()" />
+      </div>
+      <div id="teacher-login-error" class="hidden" style="color:var(--danger);font-size:0.82rem;font-weight:700;margin-bottom:0.75rem;text-align:center;"></div>
+      <button class="btn btn-cyan btn-block" onclick="submitTeacherLogin()">Enter Command Tower ⚡</button>
+      <p style="text-align:center;margin-top:1rem;font-size:0.78rem;color:var(--text-muted);">No password? <a href="#" onclick="closeModal('teacher-login-modal');showSetup()" style="color:var(--finn-blue);">Configure in Settings</a></p>
+    </div>
+  </div>
+
+  <!-- Setup Modal -->
+  <div class="modal-overlay" id="setup-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('setup-modal')">✕</button>
+      <h2 class="section-title" style="font-size:1.1rem;margin-bottom:0.3rem;">⚙ System Configuration</h2>
+
+      <div style="background:rgba(255,105,180,0.08);border:2px solid rgba(255,105,180,0.3);border-radius:12px;padding:0.9rem 1rem;margin-bottom:1.25rem;font-size:0.8rem;color:var(--princess-pink);line-height:1.6;font-weight:700;">
+        ⚠ <strong>Important:</strong> This URL only saves on <em>this browser</em>. To work on all devices, paste it into <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:4px;">js/app.js</code> and redeploy to Vercel.
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Teacher Password</label>
+        <input type="password" id="teacher-pw" class="form-control" placeholder="Set teacher access password" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Google Apps Script URL</label>
+        <input type="url" id="api-url" class="form-control" placeholder="https://script.google.com/macros/s/..." />
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.4rem;font-weight:600;">Deploy Code.gs as a Web App and paste the URL here.</p>
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-top:1.25rem;">
+        <button class="btn btn-cyan" style="flex:1;" onclick="saveSetup()">Save to Browser</button>
+        <a href="sheets-setup.html" class="btn btn-ghost" style="flex:1;text-align:center;">Setup Guide</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Project Solomon · Land of Ooo Learning · Developed by J.Opong · v2.0</p>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script>
+    // ── BACKGROUND INIT ──
+    function initOooBackground() {
+      const bg = document.getElementById('ooo-bg');
+      // Stars
+      for (let i = 0; i < 200; i++) {
+        const s = document.createElement('div');
+        s.className = 'ooo-star';
+        const sz = Math.random() * 2.5 + 0.5;
+        s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${Math.random()*4+2}s;animation-delay:${Math.random()*5}s;opacity:${Math.random()*0.6+0.1};`;
+        bg.appendChild(s);
+      }
+      // Nebula blobs
+      const colors = ['rgba(74,14,143,1)','rgba(0,170,255,1)','rgba(255,105,180,1)','rgba(0,212,170,1)'];
+      colors.forEach(c => {
+        const b = document.createElement('div');
+        b.className = 'ooo-blob';
+        const sz = Math.random() * 350 + 200;
+        b.style.cssText = `width:${sz}px;height:${sz}px;background:${c};left:${Math.random()*100}%;top:${Math.random()*100}%;`;
+        document.body.appendChild(b);
+      });
+    }
+
+    // ── PAGE NAVIGATION ──
+    function goToRoleSelect() {
+      document.getElementById('page-landing').style.display = 'none';
+      document.getElementById('page-role').style.display = '';
+    }
+    function backToLanding() {
+      document.getElementById('page-role').style.display = 'none';
+      document.getElementById('page-landing').style.display = '';
+    }
+    function goToStudent() { window.location.href = 'student.html'; }
+    function goToTeacher() {
+      const pw = localStorage.getItem('solomon_teacher_pw');
+      if (pw) {
+        document.getElementById('teacher-login-pw').value = '';
+        document.getElementById('teacher-login-error').classList.add('hidden');
+        document.getElementById('teacher-login-modal').classList.add('active');
+        setTimeout(() => document.getElementById('teacher-login-pw').focus(), 100);
+      } else {
+        setSession({ role: 'teacher' });
+        window.location.href = 'teacher.html';
+      }
+    }
+
+    function submitTeacherLogin() {
+      const pw = localStorage.getItem('solomon_teacher_pw');
+      const entered = document.getElementById('teacher-login-pw').value;
+      const errEl = document.getElementById('teacher-login-error');
+      if (entered === pw) {
+        setSession({ role: 'teacher' });
+        closeModal('teacher-login-modal');
+        window.location.href = 'teacher.html';
+      } else {
+        errEl.textContent = '✕ Wrong password, hero. Try again!';
+        errEl.classList.remove('hidden');
+        document.getElementById('teacher-login-pw').value = '';
+        document.getElementById('teacher-login-pw').focus();
+      }
+    }
+
+    function showSetup() {
+      document.getElementById('api-url').value = localStorage.getItem('solomon_api_url') || '';
+      document.getElementById('teacher-pw').value = localStorage.getItem('solomon_teacher_pw') || '';
+      document.getElementById('setup-modal').classList.add('active');
+    }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function saveSetup() {
+      const url = document.getElementById('api-url').value.trim();
+      const pw = document.getElementById('teacher-pw').value.trim();
+      if (url) localStorage.setItem('solomon_api_url', url);
+      if (pw) localStorage.setItem('solomon_teacher_pw', pw);
+      closeModal('setup-modal');
+      showToast('Configuration saved! Mathematical! 🎉', 'success');
+      checkApiConfig();
+    }
+    function checkApiConfig() {
+      if (!localStorage.getItem('solomon_api_url') && !getApiUrl()) {
+        document.getElementById('api-hint').classList.remove('hidden');
+      } else {
+        document.getElementById('api-hint').classList.add('hidden');
+      }
+    }
+
+    initOooBackground();
+    checkApiConfig();
+  </script>
+</body>
+</html>

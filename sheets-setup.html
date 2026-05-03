@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Solomon — Google Sheets Setup</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="starfield"></div>
+  <nav class="nav">
+    <div class="nav-logo">PROJECT SOLOMON<span>SETUP GUIDE</span></div>
+    <a href="index.html" class="nav-btn">← Back to Home</a>
+  </nav>
+  <div class="page" style="max-width:780px;margin:0 auto;padding:3rem 2rem 5rem;">
+    <h1 class="section-title">🛠 Google Sheets Setup — Full Guide</h1>
+    <p class="section-sub">Follow every step carefully. Step 4 is the most important one most people miss.</p>
+
+    <div class="glass-card" style="margin-bottom:1.5rem;">
+      <h3 style="font-family:'Orbitron',monospace;font-size:0.9rem;letter-spacing:0.08em;margin-bottom:1rem;color:var(--cosmic-cyan);">STEP 1 — Create a Google Sheet</h3>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);">
+        Go to <a href="https://sheets.google.com" target="_blank" style="color:var(--cosmic-cyan);">sheets.google.com</a> and create a new spreadsheet named <strong style="color:var(--text-primary);">Project Solomon Data</strong>. No need to create any tabs — the script creates them automatically.
+      </p>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:1.5rem;">
+      <h3 style="font-family:'Orbitron',monospace;font-size:0.9rem;letter-spacing:0.08em;margin-bottom:1rem;color:var(--cosmic-cyan);">STEP 2 — Open Apps Script</h3>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);">
+        In your Google Sheet, click <strong style="color:var(--text-primary);">Extensions → Apps Script</strong>. A code editor opens in a new tab.
+      </p>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:1.5rem;">
+      <h3 style="font-family:'Orbitron',monospace;font-size:0.9rem;letter-spacing:0.08em;margin-bottom:1rem;color:var(--cosmic-cyan);">STEP 3 — Paste the Code</h3>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);margin-bottom:1rem;">
+        Delete everything in the editor. Paste the full contents of <strong style="color:var(--text-primary);">Code.gs</strong>. Click the 💾 Save button (or Ctrl+S).
+      </p>
+      <button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copy Code.gs contents</button>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:1.5rem;">
+      <h3 style="font-family:'Orbitron',monospace;font-size:0.9rem;letter-spacing:0.08em;margin-bottom:1rem;color:var(--cosmic-cyan);">STEP 4 — Deploy as Web App</h3>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);">
+        Click <strong style="color:var(--text-primary);">Deploy → New Deployment</strong>. Set these exact options:
+      </p>
+      <div style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);border-radius:10px;padding:1rem 1.25rem;margin:0.75rem 0;font-size:0.85rem;">
+        <div style="margin-bottom:0.4rem;">Type: <strong style="color:var(--cosmic-cyan);">Web app</strong></div>
+        <div style="margin-bottom:0.4rem;">Execute as: <strong style="color:var(--cosmic-cyan);">Me</strong></div>
+        <div>Who has access: <strong style="color:var(--cosmic-cyan);">Anyone</strong></div>
+      </div>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);">
+        Click <strong style="color:var(--text-primary);">Deploy</strong>. Google will ask you to authorize — click through all permission prompts. After deploying, <strong style="color:var(--star-gold);">copy the Web App URL</strong> — it looks like:<br>
+        <code style="font-size:0.78rem;background:rgba(0,0,0,0.4);padding:0.3rem 0.6rem;border-radius:6px;display:block;margin-top:0.5rem;color:var(--cosmic-green);">https://script.google.com/macros/s/AKfycb.../exec</code>
+      </p>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:1.5rem;border-color:rgba(255,197,24,0.4);">
+      <h3 style="font-family:'Orbitron',monospace;font-size:0.9rem;letter-spacing:0.08em;margin-bottom:1rem;color:var(--star-gold);">⭐ STEP 5 — Hardcode the URL into app.js (CRITICAL)</h3>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);margin-bottom:0.75rem;">
+        This is the step that makes it work on <strong style="color:var(--text-primary);">every device automatically</strong> — phones, other browsers, student devices — without anyone needing to configure anything.
+      </p>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);">
+        1. Download <strong style="color:var(--text-primary);">js/app.js</strong> from your project files.<br>
+        2. Open it in any text editor (Notepad, VS Code, etc.).<br>
+        3. Find this line near the top:
+      </p>
+      <code style="font-size:0.78rem;background:rgba(0,0,0,0.4);padding:0.75rem 1rem;border-radius:8px;display:block;margin:0.75rem 0;color:#ff9999;">const HARDCODED_API_URL = 'YOUR_APPS_SCRIPT_URL_HERE';</code>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);">
+        4. Replace <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:4px;color:#ff9999;">YOUR_APPS_SCRIPT_URL_HERE</code> with your actual URL:
+      </p>
+      <code style="font-size:0.78rem;background:rgba(0,0,0,0.4);padding:0.75rem 1rem;border-radius:8px;display:block;margin:0.75rem 0;color:var(--cosmic-green);">const HARDCODED_API_URL = 'https://script.google.com/macros/s/AKfycb.../exec';</code>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);">
+        5. Save the file. Upload it to Netlify (drag the updated ZIP onto the Deploys tab).
+      </p>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:1.5rem;">
+      <h3 style="font-family:'Orbitron',monospace;font-size:0.9rem;letter-spacing:0.08em;margin-bottom:1rem;color:var(--cosmic-cyan);">STEP 6 — Test it</h3>
+      <p style="font-size:0.9rem;line-height:1.8;color:var(--text-secondary);">
+        1. Open <strong style="color:var(--text-primary);">projectsolomon.netlify.app/student</strong> on your phone.<br>
+        2. Register a test student.<br>
+        3. Open the teacher dashboard on your computer — the student should appear in Enrollment within seconds.
+      </p>
+    </div>
+
+    <div style="background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:1.25rem 1.5rem;">
+      <p style="font-size:0.82rem;color:var(--cosmic-cyan);line-height:1.7;">
+        💡 <strong>Quick checklist:</strong> Code.gs pasted ✓ · Deployed as Web App with "Anyone" access ✓ · URL hardcoded in app.js ✓ · New app.js uploaded to Netlify ✓
+      </p>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const CODE_GS = `// ════════════════════════════════════════════════
+// PROJECT SOLOMON · Google Apps Script Backend
+// Paste this entire file into Apps Script editor
+// Deploy as Web App: Execute as Me, Anyone can access
+// ════════════════════════════════════════════════
+
+var SS = SpreadsheetApp.getActiveSpreadsheet();
+var SHEET_STUDENTS = "Students";
+var SHEET_QUIZZES  = "Quizzes";
+var SHEET_SCORES   = "Scores";
+
+function corsResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  var action = (e.parameter && e.parameter.action) ? e.parameter.action : "";
+  var result;
+  try {
+    if      (action === "getStudent")       result = getStudent(e.parameter.email);
+    else if (action === "getStudents")      result = getAllStudents();
+    else if (action === "getQuizzes")       result = getQuizzes(e.parameter.section);
+    else if (action === "getScores")        result = getAllScores();
+    else if (action === "getStudentScores") result = getStudentScores(e.parameter.email);
+    else result = { ok:true, status:"Solomon API Online" };
+  } catch(err) { result = { ok:false, error:err.message }; }
+  return corsResponse(result);
+}
+
+function doPost(e) {
+  var data;
+  try {
+    data = e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : (e.parameter || {});
+  } catch(err) { return corsResponse({ ok:false, error:"Parse error: " + err.message }); }
+  var action = data.action || "";
+  var result;
+  try {
+    if      (action === "addStudent")    result = addStudent(data);
+    else if (action === "updateStudent") result = updateStudent(data);
+    else if (action === "addQuiz")       result = addQuiz(data);
+    else if (action === "updateQuiz")    result = updateQuiz(data);
+    else if (action === "addScore")      result = addScore(data);
+    else result = { ok:false, error:"Unknown action: " + action };
+  } catch(err) { result = { ok:false, error:err.message }; }
+  return corsResponse(result);
+}
+
+function ensureStudentSheet() {
+  var sheet = SS.getSheetByName(SHEET_STUDENTS);
+  if (!sheet) { sheet = SS.insertSheet(SHEET_STUDENTS); sheet.appendRow(["email","name","section","avatar","status","xp","lootBags","createdAt"]); sheet.setFrozenRows(1); }
+  return sheet;
+}
+function addStudent(data) {
+  var sheet = ensureStudentSheet();
+  var email = String(data.email || "").toLowerCase().trim();
+  if (!email) return { ok:false, error:"email_required" };
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) { if (String(values[i][0]||"").toLowerCase() === email) return { ok:false, error:"duplicate" }; }
+  sheet.appendRow([email, data.name||"", data.section||"", data.avatar||"", "pending", 0, 0, data.createdAt||new Date().toISOString()]);
+  return { ok:true };
+}
+function updateStudent(data) {
+  var sheet = ensureStudentSheet();
+  var email = String(data.email || "").toLowerCase().trim();
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]||"").toLowerCase() === email) {
+      var row = i+1;
+      if (data.status   !== undefined) sheet.getRange(row,5).setValue(data.status);
+      if (data.xp       !== undefined) sheet.getRange(row,6).setValue(Number(data.xp)||0);
+      if (data.lootBags !== undefined) sheet.getRange(row,7).setValue(Number(data.lootBags)||0);
+      return { ok:true };
+    }
+  }
+  return { ok:false, error:"not_found" };
+}
+function getStudent(email) {
+  var sheet = ensureStudentSheet();
+  email = String(email||"").toLowerCase().trim();
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) { if (String(values[i][0]||"").toLowerCase() === email) return { ok:true, student:rowToStudent(values[i]) }; }
+  return { ok:false, error:"not_found" };
+}
+function getAllStudents() {
+  var sheet = ensureStudentSheet();
+  var values = sheet.getDataRange().getValues();
+  var students = [];
+  for (var i = 1; i < values.length; i++) { if (values[i][0]) students.push(rowToStudent(values[i])); }
+  return { ok:true, students:students };
+}
+function rowToStudent(row) {
+  return { email:String(row[0]||""), name:String(row[1]||""), section:String(row[2]||""), avatar:String(row[3]||""), status:String(row[4]||"pending"), xp:Number(row[5])||0, lootBags:Number(row[6])||0, createdAt:String(row[7]||"") };
+}
+
+function ensureQuizSheet() {
+  var sheet = SS.getSheetByName(SHEET_QUIZZES);
+  if (!sheet) { sheet = SS.insertSheet(SHEET_QUIZZES); sheet.appendRow(["id","title","subject","time","sections","locked","questions","createdAt"]); sheet.setFrozenRows(1); }
+  return sheet;
+}
+function addQuiz(data) {
+  ensureQuizSheet().appendRow([String(data.id||Date.now()), data.title||"", data.subject||"", Number(data.time)||15, data.sections||"", false, data.questions||"[]", data.createdAt||new Date().toISOString()]);
+  return { ok:true };
+}
+function updateQuiz(data) {
+  var sheet = ensureQuizSheet();
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) { if (String(values[i][0])===String(data.id)) { if (data.locked!==undefined) sheet.getRange(i+1,6).setValue(data.locked); return { ok:true }; } }
+  return { ok:false, error:"not_found" };
+}
+function getQuizzes(section) {
+  var sheet = ensureQuizSheet();
+  var values = sheet.getDataRange().getValues();
+  var quizzes = [];
+  for (var i = 1; i < values.length; i++) {
+    if (!values[i][0]) continue;
+    var locked = values[i][5];
+    if (locked===true||String(locked).toUpperCase()==="TRUE") continue;
+    var sections = String(values[i][4]||"").split(",").map(function(s){return s.trim();});
+    if (section && sections.indexOf(section)<0) continue;
+    quizzes.push({ id:String(values[i][0]), title:String(values[i][1]||""), subject:String(values[i][2]||""), time:Number(values[i][3])||15, sections:sections, locked:false, questions:String(values[i][6]||"[]"), createdAt:String(values[i][7]||"") });
+  }
+  return { ok:true, quizzes:quizzes };
+}
+
+function ensureScoreSheet() {
+  var sheet = SS.getSheetByName(SHEET_SCORES);
+  if (!sheet) { sheet = SS.insertSheet(SHEET_SCORES); sheet.appendRow(["email","name","section","quizId","quizTitle","score","total","percent","xp","createdAt"]); sheet.setFrozenRows(1); }
+  return sheet;
+}
+function addScore(data) {
+  var score=Number(data.score)||0, total=Number(data.total)||1;
+  var pct=Math.round((score/total)*100), xp=Math.round((score/total)*50);
+  ensureScoreSheet().appendRow([String(data.email||"").toLowerCase(), data.name||"", data.section||"", String(data.quizId||""), data.quizTitle||"", score, total, pct, xp, data.createdAt||new Date().toISOString()]);
+  try { var s=getStudent(data.email); if(s.ok&&s.student) updateStudent({email:data.email, xp:(s.student.xp||0)+xp, lootBags:(s.student.lootBags||0)+(score===total?1:0)}); } catch(e){}
+  return { ok:true };
+}
+function getAllScores() {
+  var sheet=ensureScoreSheet(), values=sheet.getDataRange().getValues(), scores=[];
+  for(var i=1;i<values.length;i++){if(values[i][0])scores.push(rowToScore(values[i]));}
+  return { ok:true, scores:scores };
+}
+function getStudentScores(email) {
+  var sheet=ensureScoreSheet(), email2=String(email||"").toLowerCase().trim(), values=sheet.getDataRange().getValues(), scores=[];
+  for(var i=1;i<values.length;i++){if(String(values[i][0]||"").toLowerCase()===email2)scores.push(rowToScore(values[i]));}
+  return { ok:true, scores:scores };
+}
+function rowToScore(row){
+  return {email:String(row[0]||""),name:String(row[1]||""),section:String(row[2]||""),quizId:String(row[3]||""),quizTitle:String(row[4]||""),score:Number(row[5])||0,total:Number(row[6])||0,percent:Number(row[7])||0,xp:Number(row[8])||0,createdAt:String(row[9]||"")};
+}`;
+
+    function copyScript() {
+      navigator.clipboard.writeText(CODE_GS).then(() => showToast('Code.gs copied to clipboard!', 'success'));
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Solomon — Hero Portal</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .register-wrap { max-width: 520px; margin: 4rem auto; padding: 0 1.5rem; }
+    .register-hero { text-align:center; margin-bottom:2rem; }
+    .r-icon { font-size:4rem; display:block; margin-bottom:1rem; animation:float 3s ease-in-out infinite; }
+
+    /* Avatar grid override for AT theme */
+    .avatar-option {
+      background: var(--glass-bg);
+      border: 2px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 0.6rem 0.4rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-size: 1.8rem;
+    }
+    .avatar-option:hover { border-color: var(--finn-blue); transform: scale(1.08); }
+    .avatar-option.selected { border-color: var(--jake-yellow); background: rgba(255,215,0,0.12); box-shadow: 0 0 18px rgba(255,215,0,0.35); }
+    .avatar-label { font-size: 0.6rem; font-weight: 800; color: var(--text-secondary); margin-top: 0.25rem; }
+
+    /* Active filter */
+    .active-u { color: var(--finn-blue) !important; border-color: var(--finn-blue) !important; }
+
+    /* Quest card */
+    .quest-card {
+      background: var(--glass-bg);
+      border: 2px solid var(--glass-border);
+      border-radius: 18px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .quest-card:hover { border-color: var(--finn-blue); transform: translateX(4px); box-shadow: 4px 0 24px rgba(0,170,255,0.1); }
+    .quest-card.locked { opacity:0.5; cursor:not-allowed; }
+    .quest-card.locked:hover { transform:none; border-color:var(--glass-border); }
+    .quest-card.completed { border-color:rgba(0,212,170,0.3); }
+    .quest-header { display:flex; align-items:center; gap:1rem; }
+    .quest-icon { font-size:2.2rem; }
+    .quest-info { flex:1; }
+    .quest-info h3 { font-family:'Fredoka One',cursive; font-size:1rem; letter-spacing:0.04em; }
+    .quest-info p { color:var(--text-secondary); font-size:0.8rem; margin-top:0.2rem; font-weight:600; }
+    .quest-meta { display:flex; gap:0.5rem; margin-top:0.85rem; flex-wrap:wrap; }
+
+    /* Progress bar */
+    .progress-bar { width:100%; height:8px; background:rgba(0,0,0,0.4); border-radius:10px; border:1px solid var(--glass-border); overflow:hidden; }
+    .progress-fill { height:100%; background: linear-gradient(90deg, var(--finn-blue), var(--bmo-teal)); border-radius:10px; box-shadow: 0 0 8px rgba(0,170,255,0.5); transition: width 1s ease; }
+  </style>
+</head>
+<body>
+  <div id="ooo-bg"></div>
+
+  <!-- REGISTRATION VIEW -->
+  <div id="view-register" class="page">
+    <nav class="nav">
+      <div class="nav-logo">PROJECT SOLOMON<span>HERO REGISTRATION</span></div>
+      <a href="index.html" class="nav-btn">← Back to Ooo</a>
+    </nav>
+    <div class="register-wrap">
+      <div class="register-hero">
+        <span class="r-icon">⚔️</span>
+        <h1 class="section-title">Join the Adventure!</h1>
+        <p class="section-sub">Register to begin your quest in the Land of Ooo</p>
+      </div>
+
+      <div class="glass-card">
+        <div id="reg-step-1">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="reg-name" class="form-control" placeholder="Your hero name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="reg-email" class="form-control" placeholder="hero@school.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Grade & Section</label>
+            <select id="reg-section" class="form-control">
+              <option value="">Select your guild</option>
+              <option value="11A">Grade 11 — Section A</option>
+              <option value="11B">Grade 11 — Section B</option>
+              <option value="11C">Grade 11 — Section C</option>
+              <option value="11D">Grade 11 — Section D</option>
+              <option value="DEMO">DEMO Class</option>
+            </select>
+          </div>
+          <button class="btn btn-cyan btn-block" onclick="goToAvatarStep()">Choose Your Avatar →</button>
+        </div>
+
+        <div id="reg-step-2" class="hidden">
+          <h3 style="font-family:'Fredoka One',cursive;font-size:1.1rem;margin-bottom:0.25rem;">Choose Your Champion</h3>
+          <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:1.25rem;font-weight:600;">Pick your identity for the Land of Ooo</p>
+
+          <div id="universe-filter" style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem;">
+            <button class="btn btn-ghost btn-sm active-u" onclick="filterUniverse('all',this)">All</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterUniverse('Pokéverse',this)">Pokéverse</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterUniverse('Upside Down',this)">Upside Down</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterUniverse('Wizardlands',this)">Wizardlands</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterUniverse('Shinobi Realm',this)">Shinobi Realm</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterUniverse('Strix Division',this)">Strix Division</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterUniverse('Ooo Heroes',this)">Ooo Heroes</button>
+          </div>
+
+          <div class="avatar-grid" id="avatar-grid"></div>
+
+          <div style="display:flex;gap:0.75rem;margin-top:1.5rem;">
+            <button class="btn btn-ghost" onclick="backToStep1()">← Back</button>
+            <button class="btn btn-gold" style="flex:1;" onclick="completeRegistration()">⚔️ Begin Quest!</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem;text-align:center;">
+        <p style="font-size:0.85rem;color:var(--text-secondary);font-weight:700;">Already a hero? <a href="#" onclick="showLogin()" style="color:var(--finn-blue);">Sign In</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIN VIEW -->
+  <div id="view-login" class="page hidden">
+    <nav class="nav">
+      <div class="nav-logo">PROJECT SOLOMON<span>HERO PORTAL</span></div>
+      <a href="index.html" class="nav-btn">← Back to Ooo</a>
+    </nav>
+    <div class="register-wrap">
+      <div class="register-hero">
+        <span class="r-icon">🏰</span>
+        <h1 class="section-title">Welcome Back, Hero!</h1>
+        <p class="section-sub">Enter your email to re-enter the Land of Ooo</p>
+      </div>
+      <div class="glass-card">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="login-email" class="form-control" placeholder="hero@school.com" onkeydown="if(event.key==='Enter')doLogin()" />
+        </div>
+        <button class="btn btn-cyan btn-block" onclick="doLogin()">Enter the Land of Ooo ⚔️</button>
+        <p style="text-align:center;margin-top:1rem;font-size:0.82rem;color:var(--text-secondary);font-weight:700;">New hero? <a href="#" onclick="showRegister()" style="color:var(--princess-pink);">Register here</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PENDING VIEW -->
+  <div id="view-pending" class="page hidden">
+    <nav class="nav">
+      <div class="nav-logo">PROJECT SOLOMON<span>HERO PORTAL</span></div>
+      <a href="index.html" class="nav-btn logout" onclick="doLogout()">⏻ Logout</a>
+    </nav>
+    <div style="max-width:500px;margin:5rem auto;padding:0 1.5rem;text-align:center;">
+      <div class="glass-card">
+        <div style="font-size:4rem;margin-bottom:1rem;">⏳</div>
+        <h2 class="section-title" style="font-size:1.4rem;">Awaiting the Wizard's Blessing!</h2>
+        <p style="color:var(--text-secondary);margin-top:0.75rem;line-height:1.7;font-weight:600;">Your quest application has been received! Your teacher (the great wizard) must approve your account before you can enter the Land of Ooo.</p>
+        <div style="margin-top:1.5rem;padding:1rem;background:rgba(0,170,255,0.05);border:2px solid rgba(0,170,255,0.15);border-radius:12px;">
+          <p style="font-size:0.82rem;color:var(--finn-blue);font-weight:700;">💡 Check back soon or ask your teacher to approve your account.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="checkApproval()" style="margin-top:1.5rem;">🔄 Check Status</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD VIEW -->
+  <div id="view-dashboard" class="page hidden">
+    <nav class="nav">
+      <div class="nav-logo">PROJECT SOLOMON<span>HERO PORTAL</span></div>
+      <div class="nav-links">
+        <span id="nav-loot-count" style="font-family:'Fredoka One',cursive;font-size:0.9rem;color:var(--jake-yellow);margin-right:0.5rem;"></span>
+        <a href="index.html" class="nav-btn logout" onclick="doLogout()">⏻ Logout</a>
+      </div>
+    </nav>
+
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-section-label">Hero Hub</div>
+        <button class="sidebar-item active" onclick="showStudentTab('zones')">
+          <span class="sidebar-icon">🗺️</span> Zone Select
+        </button>
+        <button class="sidebar-item" onclick="showStudentTab('quests')">
+          <span class="sidebar-icon">📋</span> All Quests
+        </button>
+        <button class="sidebar-item" onclick="showStudentTab('journal')">
+          <span class="sidebar-icon">📖</span> Journey Journal
+        </button>
+        <button class="sidebar-item" onclick="showStudentTab('loot')">
+          <span class="sidebar-icon">🎁</span> Loot Bag
+        </button>
+        <button class="sidebar-item" onclick="showStudentTab('profile')">
+          <span class="sidebar-icon">🛡️</span> My Profile
+        </button>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Profile Banner (always visible) -->
+        <div id="profile-banner" class="profile-banner"></div>
+
+        <!-- ZONE SELECT -->
+        <div id="stab-zones" class="page-section active">
+          <h1 class="section-title">🗺️ Land of Ooo — Choose Your Zone!</h1>
+          <p class="section-sub">Mathematical! Pick your adventure, hero.</p>
+
+          <div class="quest-zones" style="margin-top:1.5rem;">
+            <!-- Adventure Zone -->
+            <div class="quest-zone-card adventure" onclick="showStudentTab('adventure')">
+              <div class="zone-icon-wrap">🗺️</div>
+              <div class="zone-info">
+                <h3 style="color:var(--finn-blue);">Adventure</h3>
+                <p>Explore the Land of Ooo through epic interactive lessons. Unlock knowledge, level up!</p>
+              </div>
+              <div class="zone-arrow">→</div>
+            </div>
+
+            <!-- Training Camp Zone -->
+            <div class="quest-zone-card training" onclick="showStudentTab('training')">
+              <div class="zone-icon-wrap">🐦</div>
+              <div class="zone-info">
+                <h3 style="color:var(--jake-yellow);">Training Camp</h3>
+                <p>Flap your way through practice questions. Dodge obstacles, collect power-ups!</p>
+              </div>
+              <div class="zone-arrow">→</div>
+            </div>
+
+            <!-- Arena Zone -->
+            <div class="quest-zone-card arena" onclick="showStudentTab('arena')">
+              <div class="zone-icon-wrap">🏟️</div>
+              <div class="zone-info">
+                <h3 style="color:var(--princess-pink);">Arena</h3>
+                <p>Step into the Summative Showdown! Answer fast, beat the clock, claim glory!</p>
+              </div>
+              <div class="zone-arrow">→</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADVENTURE ZONE (Lessons) -->
+        <div id="stab-adventure" class="page-section">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem;">
+            <button class="btn btn-ghost btn-sm" onclick="showStudentTab('zones')">← Back</button>
+            <div>
+              <h1 class="section-title" style="margin-bottom:0;">🗺️ Adventure Zone</h1>
+              <p class="section-sub">Interactive lessons — your epic journey begins here!</p>
+            </div>
+          </div>
+          <div id="adventure-list" style="margin-top:1.5rem;"></div>
+        </div>
+
+        <!-- TRAINING CAMP (Practice) -->
+        <div id="stab-training" class="page-section">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem;">
+            <button class="btn btn-ghost btn-sm" onclick="showStudentTab('zones')">← Back</button>
+            <div>
+              <h1 class="section-title" style="margin-bottom:0;">🐦 Training Camp</h1>
+              <p class="section-sub">Practice quizzes — flappy bird style with power-ups!</p>
+            </div>
+          </div>
+          <div id="training-list" style="margin-top:1.5rem;"></div>
+        </div>
+
+        <!-- ARENA (Summative) -->
+        <div id="stab-arena" class="page-section">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem;">
+            <button class="btn btn-ghost btn-sm" onclick="showStudentTab('zones')">← Back</button>
+            <div>
+              <h1 class="section-title" style="margin-bottom:0;">🏟️ Arena</h1>
+              <p class="section-sub">Summative assessments — the ultimate game show showdown!</p>
+            </div>
+          </div>
+          <div id="arena-list" style="margin-top:1.5rem;"></div>
+        </div>
+
+        <!-- ALL QUESTS -->
+        <div id="stab-quests" class="page-section">
+          <h1 class="section-title">📋 All Quests</h1>
+          <p class="section-sub">Your full quest board</p>
+          <div id="quest-list" style="margin-top:1.5rem;"></div>
+        </div>
+
+        <!-- JOURNEY JOURNAL -->
+        <div id="stab-journal" class="page-section">
+          <h1 class="section-title">📖 Journey Journal</h1>
+          <p class="section-sub">Your mission history and achievements</p>
+          <div class="grid-4" style="margin-bottom:2rem;" id="journal-stats"></div>
+          <div id="journal-list"></div>
+        </div>
+
+        <!-- LOOT BAG -->
+        <div id="stab-loot" class="page-section">
+          <h1 class="section-title">🎁 Loot Bag</h1>
+          <p class="section-sub">Earn loot bags by achieving perfect scores!</p>
+          <div id="loot-content"></div>
+        </div>
+
+        <!-- PROFILE -->
+        <div id="stab-profile" class="page-section">
+          <h1 class="section-title">🛡️ My Profile</h1>
+          <p class="section-sub">Your hero identity in the Land of Ooo</p>
+          <div id="profile-content"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Loot Modal -->
+  <div class="modal-overlay" id="loot-modal">
+    <div class="modal" style="text-align:center;">
+      <button class="modal-close" onclick="closeModal('loot-modal')">✕</button>
+      <h2 class="section-title" style="font-size:1.1rem;margin-bottom:0.25rem;">Opening Loot Bag... 🎁</h2>
+      <div id="loot-reveal" style="margin:2rem 0;">
+        <div id="loot-bag-anim" style="font-size:5rem;margin:0 auto;">🎁</div>
+      </div>
+      <div id="loot-result" class="hidden">
+        <div id="loot-prize-icon" style="font-size:4rem;margin-bottom:0.75rem;"></div>
+        <h3 id="loot-prize-name" style="font-family:'Fredoka One',cursive;font-size:1.3rem;"></h3>
+        <p id="loot-prize-rarity" class="badge" style="margin:0.5rem auto;display:inline-block;font-size:0.85rem;"></p>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-top:0.75rem;font-weight:600;">Collect this reward from your teacher! 🏫</p>
+      </div>
+      <button id="open-loot-btn" class="btn btn-magenta" onclick="openLootBag()" style="margin-top:1rem;">✨ Open!</button>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    // Init OOO background
+    (function initBg() {
+      const bg = document.getElementById('ooo-bg');
+      for (let i = 0; i < 180; i++) {
+        const s = document.createElement('div'); s.className = 'ooo-star';
+        const sz = Math.random()*2.5+0.5;
+        s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${Math.random()*4+2}s;animation-delay:${Math.random()*5}s;opacity:${Math.random()*0.6+0.1};`;
+        bg.appendChild(s);
+      }
+    })();
+
+    let currentStudent = null;
+    let selectedAvatar = null;
+
+    /* ── VIEW SWITCHER ── */
+    function showView(name) {
+      ['register','login','pending','dashboard'].forEach(v => {
+        const el = document.getElementById('view-'+v);
+        if (el) el.classList.add('hidden');
+      });
+      const target = document.getElementById('view-'+name);
+      if (target) target.classList.remove('hidden');
+    }
+    function showLogin() { showView('login'); }
+    function showRegister() { showView('register'); }
+    function doLogout() { clearSession(); window.location.href = 'index.html'; }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    /* ── LOAD & ROUTE STUDENT ── */
+    function loadStudent(s) {
+      currentStudent = s;
+      if (s.status === 'pending') showView('pending');
+      else if (s.status === 'rejected') { showToast('Account rejected. Contact your teacher.', 'error'); doLogout(); }
+      else showDashboard();
+    }
+
+    /* ── LOGIN ── */
+    async function doLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      if (!email) { showToast('Please enter your email', 'error'); return; }
+      const btn = document.querySelector('#view-login .btn-cyan');
+      btn.textContent = 'Seeking hero...'; btn.disabled = true;
+      const s = await fetchStudent(email);
+      btn.textContent = 'Enter the Land of Ooo ⚔️'; btn.disabled = false;
+      if (!s) { showToast('Hero not found. Please register first!', 'error'); return; }
+      setSession({ role:'student', email:s.email });
+      loadStudent(s);
+    }
+
+    /* ── CHECK APPROVAL ── */
+    async function checkApproval() {
+      const sess = getSession(); if (!sess) return;
+      showToast('Checking with the wizard...', 'info');
+      bustStudentCache(sess.email);
+      const s = await fetchStudent(sess.email);
+      if (!s) { showToast('Hero not found', 'error'); return; }
+      currentStudent = s;
+      if (s.status === 'approved') { loadStudent(s); showToast('Approved! Welcome to the Land of Ooo! ⚔️', 'success'); }
+      else showToast('Still pending. Ask your teacher!', 'info');
+    }
+
+    /* ── DASHBOARD ── */
+    function showDashboard() {
+      showView('dashboard');
+      renderProfileBanner();
+      document.getElementById('nav-loot-count').textContent = (currentStudent.lootBags||0) > 0 ? `🎁 ×${currentStudent.lootBags}` : '';
+    }
+
+    /* ══ REGISTRATION ══ */
+    let regData = {};
+
+    function goToAvatarStep() {
+      const name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const section = document.getElementById('reg-section').value;
+      if (!name||!email||!section) { showToast('Fill in all fields, hero!', 'error'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Invalid email format', 'error'); return; }
+      regData = { name, email, section };
+      document.getElementById('reg-step-1').classList.add('hidden');
+      document.getElementById('reg-step-2').classList.remove('hidden');
+      renderAvatarGrid('all');
+    }
+    function backToStep1() {
+      document.getElementById('reg-step-2').classList.add('hidden');
+      document.getElementById('reg-step-1').classList.remove('hidden');
+    }
+
+    function renderAvatarGrid(universe) {
+      const grid = document.getElementById('avatar-grid');
+      const avs = universe==='all' ? AVATARS : AVATARS.filter(a=>a.universe===universe);
+      grid.innerHTML = avs.map(a => `
+        <div class="avatar-option ${selectedAvatar?.id===a.id?'selected':''}" onclick="selectAvatar('${a.id}',this)">
+          <div style="font-size:2rem;">${a.emoji}</div>
+          <div class="avatar-label">${a.label}</div>
+        </div>`).join('');
+    }
+
+    function filterUniverse(u, btn) {
+      document.querySelectorAll('#universe-filter .btn').forEach(b=>{b.classList.remove('active-u');});
+      btn.classList.add('active-u');
+      renderAvatarGrid(u);
+    }
+
+    function selectAvatar(id, el) {
+      selectedAvatar = getAvatarById(id);
+      document.querySelectorAll('.avatar-option').forEach(e=>e.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    async function completeRegistration() {
+      if (!selectedAvatar) { showToast('Choose a champion first!', 'error'); return; }
+      const btn = document.querySelector('#reg-step-2 .btn-gold');
+      btn.textContent = '⚔️ Registering...'; btn.disabled = true;
+      const result = await saveStudent({ ...regData, avatar:selectedAvatar.id });
+      btn.textContent = '⚔️ Begin Quest!'; btn.disabled = false;
+      if (!result.ok) { showToast(result.error, 'error'); return; }
+      setSession({ role:'student', email:regData.email });
+      showToast('Quest application submitted! Awaiting wizard approval 🧙', 'success');
+      currentStudent = getCachedStudent(regData.email) || { ...regData, avatar:selectedAvatar.id, status:'pending', xp:0, lootBags:0 };
+      showView('pending');
+    }
+
+    /* ══ PROFILE BANNER ══ */
+    function renderProfileBanner() {
+      const av = getAvatarById(currentStudent.avatar);
+      const level = getLevel(parseInt(currentStudent.xp)||0);
+      document.getElementById('profile-banner').innerHTML = `
+        <div class="profile-avatar-lg">${av.emoji}</div>
+        <div class="profile-info" style="flex:1;">
+          <h2>${currentStudent.name}</h2>
+          <p>${av.label} · ${av.universe} · Section ${currentStudent.section}</p>
+          <div class="xp-bar-section" style="max-width:280px;margin-top:0.5rem;">
+            <div class="xp-label">
+              <span class="glow-gold" style="font-size:0.8rem;font-family:'Fredoka One',cursive;">${level.label}</span>
+              <span style="font-size:0.75rem;color:var(--text-muted);">${currentStudent.xp||0} XP</span>
+            </div>
+            <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${level.progress}%"></div></div>
+            <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.25rem;">${level.next===Infinity?'MAX LEVEL — LEGENDARY! 🌟':`${level.next-(parseInt(currentStudent.xp)||0)} XP to next rank`}</p>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:var(--jake-yellow);">${currentStudent.lootBags||0}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);font-weight:800;letter-spacing:0.1em;">LOOT BAGS</div>
+        </div>`;
+    }
+
+    /* ══ STUDENT TABS ══ */
+    function showStudentTab(name) {
+      document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
+      document.querySelectorAll('.sidebar-item').forEach(s=>s.classList.remove('active'));
+
+      const section = document.getElementById('stab-'+name);
+      if (section) section.classList.add('active');
+
+      // Highlight correct sidebar item
+      const sidebarMap = { zones:'zones', adventure:'quests', training:'quests', arena:'quests', quests:'quests', journal:'journal', loot:'loot', profile:'profile' };
+      const sidebarTarget = sidebarMap[name] || name;
+      document.querySelectorAll('.sidebar-item').forEach(item => {
+        if (item.getAttribute('onclick')?.includes(sidebarTarget)) item.classList.add('active');
+      });
+
+      // Load content
+      if (name==='adventure') renderZoneList('adventure');
+      if (name==='training') renderZoneList('training');
+      if (name==='arena') renderZoneList('arena');
+      if (name==='quests') renderAllQuests();
+      if (name==='journal') renderJournal();
+      if (name==='loot') renderLoot();
+      if (name==='profile') renderProfile();
+    }
+
+    /* ══ ZONE LISTS ══ */
+    async function renderZoneList(zone) {
+      const containerId = zone + '-list';
+      const container = document.getElementById(containerId);
+      showLoading(container, `Loading ${zone === 'adventure' ? 'adventures' : zone === 'training' ? 'training missions' : 'arena battles'}...`);
+
+      const [quizzes, myScores] = await Promise.all([
+        fetchQuizzesForStudent(currentStudent.section),
+        getStudentScores(currentStudent.email)
+      ]);
+
+      // Filter by zone
+      let filtered = quizzes.filter(q => {
+        const cat = q.category || 'practice';
+        if (zone === 'adventure') return cat === 'adventure' || cat === 'lesson';
+        if (zone === 'training') return cat === 'practice' || cat === 'training';
+        if (zone === 'arena') return cat === 'assessment' || cat === 'arena';
+        return true;
+      });
+
+      if (!filtered.length) {
+        const msgs = {
+          adventure: '🗺️ No adventure lessons deployed yet.<br>Your teacher will open new worlds soon!',
+          training: '🐦 No training missions available yet.<br>Your teacher will deploy practice camps soon!',
+          arena: '🏟️ No arena battles active yet.<br>Your teacher will start the showdown soon!'
+        };
+        container.innerHTML = `<div class="empty-state"><span>${zone==='adventure'?'🗺️':zone==='training'?'🐦':'🏟️'}</span><p>${msgs[zone]}</p></div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(q => {
+        const done = myScores.find(s=>s.quizId==q.id);
+        const pct = done ? Math.round(done.score/done.total*100) : null;
+        const cat = q.category || 'practice';
+        const isArena = cat === 'assessment' || cat === 'arena';
+        const icon = zone==='adventure'?'🗺️':zone==='training'?'🐦':'🏟️';
+        return `<div class="quest-card ${done?'completed':''}" onclick="${done&&isArena?'':` startQuest(${q.id})`}" style="${done&&isArena?'cursor:default;':''}">
+          <div class="quest-header">
+            <div class="quest-icon">${done?(pct===100?'🌟':'✅'):icon}</div>
+            <div class="quest-info">
+              <h3>${q.title}</h3>
+              <p>${q.subject||'General'} · ${(q.questions||[]).length} questions · ⏱ ${q.time} min</p>
+            </div>
+            ${done?`<div style="text-align:right;">
+              ${isArena?`<div style="font-size:0.78rem;color:var(--text-secondary);font-weight:700;">Submitted ✓</div>`
+              :`<div style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:${pct>=90?'var(--bmo-teal)':pct>=75?'var(--finn-blue)':'var(--jake-yellow)'};">${pct}%</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);">${done.score}/${done.total}</div>`}
+            </div>`:'<span style="color:var(--finn-blue);font-size:1.4rem;">→</span>'}
+          </div>
+          <div class="quest-meta">
+            <span class="badge ${done?'badge-green':'badge-cyan'}">${done?'✓ DONE':'▶ PLAY'}</span>
+            ${pct===100?'<span class="badge badge-gold">🎁 LOOT EARNED</span>':''}
+            ${isArena&&!done?'<span class="badge badge-magenta">📝 ASSESSMENT</span>':''}
+            <span class="badge badge-gray">+50 XP max</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function renderAllQuests() {
+      const list = document.getElementById('quest-list');
+      showLoading(list, 'Loading all quests...');
+      const [quizzes, myScores] = await Promise.all([
+        fetchQuizzesForStudent(currentStudent.section),
+        getStudentScores(currentStudent.email)
+      ]);
+      if (!quizzes.length) { list.innerHTML='<div class="empty-state"><span>🏰</span><p>No quests available yet. Your teacher will deploy missions soon!</p></div>'; return; }
+      list.innerHTML = quizzes.map(q => {
+        const done = myScores.find(s=>s.quizId==q.id);
+        const pct = done ? Math.round(done.score/done.total*100) : null;
+        const cat = q.category || 'practice';
+        const isArena = cat === 'assessment' || cat === 'arena';
+        const icon = cat==='adventure'||cat==='lesson'?'🗺️':cat==='practice'||cat==='training'?'🐦':'🏟️';
+        return `<div class="quest-card ${done?'completed':''}" onclick="${done&&isArena?'':` startQuest(${q.id})`}">
+          <div class="quest-header">
+            <div class="quest-icon">${done?(pct===100?'🌟':'✅'):icon}</div>
+            <div class="quest-info">
+              <h3>${q.title}</h3>
+              <p>${q.subject||'General'} · ${(q.questions||[]).length} questions · ⏱ ${q.time} min</p>
+            </div>
+            ${done?`<div style="text-align:right;">${isArena?'<div style="font-size:0.78rem;color:var(--text-secondary);">Submitted ✓</div>':`<div style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--finn-blue);">${pct}%</div>`}</div>`:'<span style="color:var(--finn-blue);">→</span>'}
+          </div>
+          <div class="quest-meta">
+            <span class="badge ${done?'badge-green':'badge-cyan'}">${done?'✓ DONE':'▶ PLAY'}</span>
+            ${pct===100?'<span class="badge badge-gold">🎁 LOOT EARNED</span>':''}
+            <span class="badge badge-gray">+50 XP max</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function startQuest(id) {
+      setSession({...getSession(), activeQuiz:id});
+      window.location.href=`quiz-play.html?id=${id}`;
+    }
+
+    /* ══ JOURNEY JOURNAL ══ */
+    async function renderJournal() {
+      showLoading('journal-list', 'Loading your legend...');
+      const scores = await getStudentScores(currentStudent.email);
+      const total=scores.length, avg=total?Math.round(scores.reduce((a,b)=>a+(b.score/b.total*100),0)/total):0;
+      const perfects=scores.filter(s=>s.score==s.total).length;
+      const totalXP=scores.reduce((a,b)=>a+Math.round((b.score/b.total)*50),0);
+      document.getElementById('journal-stats').innerHTML=`
+        <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Quests Done</div></div>
+        <div class="stat-card"><div class="stat-value">${avg}%</div><div class="stat-label">Avg Score</div></div>
+        <div class="stat-card"><div class="stat-value">${perfects}</div><div class="stat-label">Perfect Scores</div></div>
+        <div class="stat-card"><div class="stat-value">${totalXP}</div><div class="stat-label">Total XP</div></div>`;
+      const list=document.getElementById('journal-list');
+      if (!scores.length) { list.innerHTML='<div class="empty-state"><span>📖</span><p>No quests completed yet. Time to adventure!</p></div>'; return; }
+      list.innerHTML=scores.slice().reverse().map(s=>{
+        const pct=Math.round(s.score/s.total*100);
+        const col=pct>=90?'var(--bmo-teal)':pct>=75?'var(--finn-blue)':pct>=50?'var(--jake-yellow)':'#ff4444';
+        const cat = s.category || 'practice';
+        const isArena = cat==='assessment'||cat==='arena';
+        const icon = cat==='adventure'||cat==='lesson'?'🗺️':cat==='training'?'🐦':'🏟️';
+        if(isArena){
+          return `<div class="journal-entry">
+            <div class="score-circle" style="background:rgba(255,105,180,0.1);border:2px solid var(--princess-pink);color:var(--princess-pink);font-size:0.7rem;">✓</div>
+            <div style="flex:1;"><h4 style="font-size:0.9rem;font-weight:700;">${icon} ${s.quizTitle||'Assessment'}</h4>
+            <p style="font-size:0.78rem;color:var(--text-secondary);font-weight:600;">🏟️ Arena Battle · ${formatDate(s.createdAt)}</p>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;">Scores only visible to your wizard teacher.</p></div>
+            <div style="text-align:right;"><div style="font-family:'Fredoka One',cursive;font-size:0.9rem;color:var(--finn-blue);">+${Math.round((s.score/s.total)*50)} XP</div></div></div>`;
+        }
+        return `<div class="journal-entry">
+          <div class="score-circle" style="background:${col}22;border:2px solid ${col};color:${col};font-family:'Fredoka One',cursive;">${pct}%</div>
+          <div style="flex:1;"><h4 style="font-size:0.9rem;font-weight:700;">${icon} ${s.quizTitle||'Quest'}</h4>
+          <p style="font-size:0.78rem;color:var(--text-secondary);font-weight:600;">${s.score}/${s.total} correct · ${formatDate(s.createdAt)}</p></div>
+          <div style="text-align:right;">
+            <div style="font-family:'Fredoka One',cursive;font-size:0.9rem;color:var(--finn-blue);">+${Math.round((s.score/s.total)*50)} XP</div>
+            ${s.score==s.total?'<div style="font-size:0.7rem;color:var(--jake-yellow);">🎁 Loot!</div>':''}
+          </div></div>`;
+      }).join('');
+    }
+
+    /* ══ LOOT ══ */
+    function renderLoot() {
+      const bags=parseInt(currentStudent.lootBags)||0;
+      const lootHistory=JSON.parse(localStorage.getItem(`s_loot_${currentStudent.email}`)||'[]');
+      document.getElementById('loot-content').innerHTML=`
+        <div style="text-align:center;margin-bottom:2rem;">
+          <div style="font-family:'Fredoka One',cursive;font-size:4rem;color:var(--jake-yellow);margin-bottom:0.5rem;">${bags}</div>
+          <p style="color:var(--text-secondary);font-weight:700;">Loot Bags Available</p>
+          <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">Get perfect scores to earn loot!</p>
+          ${bags>0?`<button class="btn btn-gold" onclick="showLootModal()" style="margin-top:1.25rem;">🎁 Open a Loot Bag!</button>`:`<button class="btn btn-ghost" style="margin-top:1.25rem;cursor:not-allowed;" disabled>No Loot Bags Yet</button>`}
+        </div>
+        ${lootHistory.length?`<h3 style="font-family:'Fredoka One',cursive;font-size:1rem;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:1rem;">📜 LOOT HISTORY</h3>
+        <div class="loot-grid">${lootHistory.map(l=>`<div class="loot-item"><span class="loot-icon">${l.emoji}</span><h4>${l.name}</h4>
+          <p class="badge ${l.rarity==='Rare'?'badge-gold':l.rarity==='Uncommon'?'badge-cyan':'badge-gray'}" style="margin:0.3rem auto;display:inline-block;">${l.rarity}</p>
+          <p style="font-size:0.72rem;color:var(--text-muted);">${formatDate(l.date)}</p></div>`).join('')}</div>`:``}`;
+    }
+
+    function showLootModal() {
+      document.getElementById('loot-result').classList.add('hidden');
+      document.getElementById('open-loot-btn').classList.remove('hidden');
+      document.getElementById('loot-bag-anim').textContent='🎁';
+      document.getElementById('loot-modal').classList.add('active');
+    }
+
+    async function openLootBag() {
+      const bags=parseInt(currentStudent.lootBags)||0;
+      if (bags<=0) { showToast('No loot bags!','error'); return; }
+      document.getElementById('open-loot-btn').classList.add('hidden');
+      const bag=document.getElementById('loot-bag-anim');
+      let i=0; const emojis=['🎁','✨','🌟','💫','🎊','⚡','🏆'];
+      const shake=setInterval(()=>{bag.textContent=emojis[i++%emojis.length];bag.style.transform=`scale(${1+Math.random()*0.3}) rotate(${(Math.random()-0.5)*20}deg)`;},120);
+      setTimeout(async()=>{
+        clearInterval(shake); bag.style.transform='scale(1)';
+        const prize=rollLoot();
+        bag.textContent=prize.emoji;
+        document.getElementById('loot-prize-icon').textContent=prize.emoji;
+        document.getElementById('loot-prize-name').textContent=prize.name;
+        const re=document.getElementById('loot-prize-rarity');
+        re.textContent=prize.rarity; re.className=`badge ${prize.rarity==='Rare'?'badge-gold':prize.rarity==='Uncommon'?'badge-cyan':'badge-gray'}`;
+        document.getElementById('loot-result').classList.remove('hidden');
+        const newBags=bags-1; currentStudent.lootBags=newBags;
+        await updateStudent(currentStudent.email,{lootBags:newBags});
+        const hist=JSON.parse(localStorage.getItem(`s_loot_${currentStudent.email}`)||'[]');
+        hist.push({...prize,date:new Date().toISOString()});
+        localStorage.setItem(`s_loot_${currentStudent.email}`,JSON.stringify(hist));
+        document.getElementById('nav-loot-count').textContent=newBags>0?`🎁 ×${newBags}`:'';
+        renderProfileBanner(); showToast(`You got: ${prize.name}! Mathematical! 🌟`,'success');
+      },1500);
+    }
+
+    /* ══ PROFILE ══ */
+    function renderProfile() {
+      const av=getAvatarById(currentStudent.avatar), level=getLevel(parseInt(currentStudent.xp)||0);
+      document.getElementById('profile-content').innerHTML=`
+        <div class="glass-card" style="max-width:480px;">
+          <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;">
+            <div class="profile-avatar-lg" style="width:90px;height:90px;font-size:3rem;">${av.emoji}</div>
+            <div><h3 style="font-family:'Fredoka One',cursive;font-size:1.2rem;">${currentStudent.name}</h3>
+            <p style="color:var(--text-secondary);font-size:0.82rem;font-weight:700;">Class ${currentStudent.section}</p>
+            <p style="color:var(--jake-yellow);font-size:0.82rem;margin-top:0.25rem;font-weight:800;">⭐ ${level.label}</p></div>
+          </div>
+          <div class="form-group"><p class="form-label">Champion</p><p style="font-weight:700;">${av.emoji} ${av.label} — ${av.universe}</p></div>
+          <div class="form-group"><p class="form-label">Email</p><p style="font-weight:700;">${currentStudent.email}</p></div>
+          <div class="form-group"><p class="form-label">Total XP</p><p class="glow-cyan" style="font-family:'Fredoka One',cursive;font-size:1.2rem;">${currentStudent.xp||0} XP</p></div>
+          <div class="form-group"><p class="form-label">Loot Bags</p><p style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:var(--jake-yellow);">${currentStudent.lootBags||0} 🎁</p></div>
+        </div>`;
+    }
+
+    /* ══ INIT ══ */
+    (async function init() {
+      const sess = getSession();
+      if (sess?.role === 'student' && sess.email) {
+        showView('login');
+        document.getElementById('view-login').innerHTML = `
+          <nav class="nav"><div class="nav-logo">PROJECT SOLOMON<span>HERO PORTAL</span></div><a href="index.html" class="nav-btn">← Back to Ooo</a></nav>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;min-height:60vh;">
+            <div class="spinner"></div>
+            <p style="color:var(--text-secondary);font-size:0.9rem;font-weight:700;">Loading your hero profile...</p>
+          </div>`;
+        const s = await fetchStudent(sess.email);
+        if (s) { loadStudent(s); }
+        else {
+          clearSession();
+          showView('login');
+          document.getElementById('view-login').innerHTML = `
+            <nav class="nav"><div class="nav-logo">PROJECT SOLOMON<span>HERO PORTAL</span></div><a href="index.html" class="nav-btn">← Back to Ooo</a></nav>
+            <div class="register-wrap"><div class="register-hero"><span class="r-icon">🏰</span><h1 class="section-title">Welcome Back, Hero!</h1><p class="section-sub">Enter your email to re-enter the Land of Ooo</p></div>
+            <div class="glass-card"><div class="form-group"><label class="form-label">Email Address</label><input type="email" id="login-email" class="form-control" placeholder="hero@school.com" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+            <button class="btn btn-cyan btn-block" onclick="doLogin()">Enter the Land of Ooo ⚔️</button>
+            <p style="text-align:center;margin-top:1rem;font-size:0.82rem;color:var(--text-secondary);font-weight:700;">New hero? <a href="#" onclick="showRegister()" style="color:var(--princess-pink);">Register here</a></p></div></div>`;
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

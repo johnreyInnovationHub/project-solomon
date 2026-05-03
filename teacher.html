@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Solomon — Wizard Command Tower</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .data-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+    .data-table th { font-family:'Fredoka One',cursive; font-size:0.75rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-muted); padding:0.6rem 0.75rem; border-bottom:2px solid var(--glass-border); text-align:left; }
+    .data-table td { padding:0.75rem; border-bottom:1px solid rgba(255,255,255,0.04); vertical-align:middle; font-weight:600; }
+    .data-table tr:hover td { background:rgba(0,170,255,0.04); }
+    .deploy-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; margin-top:1.5rem; }
+    @media(max-width:768px){.deploy-grid{grid-template-columns:1fr;}}
+    .rec-sec-btn { padding:0.4rem 1rem;border-radius:50px;border:none;background:transparent;color:var(--text-secondary);font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:all 0.2s; }
+    .rec-sec-btn.active-sec { background:rgba(0,170,255,0.18); color:var(--finn-blue); }
+  </style>
+</head>
+<body>
+  <div id="ooo-bg"></div>
+
+  <nav class="nav">
+    <div class="nav-logo">
+      PROJECT SOLOMON
+      <span>WIZARD COMMAND TOWER</span>
+    </div>
+    <div class="nav-links">
+      <span id="nav-time" style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--text-muted);margin-right:0.5rem;"></span>
+      <a href="index.html" class="nav-btn logout" onclick="doLogout()">⏻ Logout</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-layout page">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section-label">Command</div>
+      <button class="sidebar-item active" onclick="showTab('overview')">
+        <span class="sidebar-icon">🏰</span> Overview
+      </button>
+      <button class="sidebar-item" onclick="showTab('enrollment')">
+        <span class="sidebar-icon">👥</span> Enrollment
+      </button>
+
+      <div class="sidebar-section-label" style="margin-top:0.5rem;">Deploy</div>
+      <button class="sidebar-item" onclick="showTab('deploy')">
+        <span class="sidebar-icon">🚀</span> Deploy Hub
+      </button>
+      <button class="sidebar-item" onclick="showTab('adventure')">
+        <span class="sidebar-icon">🗺️</span> Deploy Adventure
+      </button>
+      <button class="sidebar-item" onclick="showTab('training')">
+        <span class="sidebar-icon">🐦</span> Training Camp
+      </button>
+      <button class="sidebar-item" onclick="showTab('arena')">
+        <span class="sidebar-icon">🏟️</span> Arena
+      </button>
+
+      <div class="sidebar-section-label" style="margin-top:0.5rem;">Data</div>
+      <button class="sidebar-item" onclick="showTab('quizzes')">
+        <span class="sidebar-icon">📋</span> Quest Portal
+      </button>
+      <button class="sidebar-item" onclick="showTab('records')">
+        <span class="sidebar-icon">📊</span> Records
+      </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- ══ OVERVIEW ══ -->
+      <div id="tab-overview" class="page-section active">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">🏰 Wizard's Overview</h1>
+            <p class="section-sub">Your magical classroom in the Land of Ooo</p>
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            <button class="btn btn-ghost btn-sm" onclick="runDiagnostic()" style="font-size:0.75rem;">🔍 Diagnose</button>
+            <button class="btn btn-ghost btn-sm" onclick="fixSheets()" style="font-size:0.75rem;color:var(--jake-yellow);">🔧 Fix Sheets</button>
+          </div>
+        </div>
+        <div id="diagnostic-box" style="display:none;background:rgba(0,0,0,0.5);border:2px solid rgba(0,170,255,0.3);border-radius:12px;padding:1rem;margin-bottom:1.5rem;font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--finn-blue);line-height:1.8;max-height:200px;overflow-y:auto;white-space:pre-wrap;"></div>
+
+        <div class="stats-row" id="stats-row">
+          <div class="stat-card"><div class="stat-value" id="stat-students">0</div><div class="stat-label">Active Heroes</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-pending">0</div><div class="stat-label">Awaiting Blessing</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-quizzes">0</div><div class="stat-label">Quests Deployed</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-scores">0</div><div class="stat-label">Total Submissions</div></div>
+        </div>
+
+        <div class="grid-2" style="gap:1.5rem;">
+          <div class="glass-card">
+            <h3 style="font-family:'Fredoka One',cursive;font-size:1rem;letter-spacing:0.06em;margin-bottom:1.25rem;color:var(--text-secondary);">⏳ AWAITING WIZARD'S BLESSING</h3>
+            <div id="overview-pending-list"><div class="empty-state"><span>🎉</span>No pending students</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="showTab('enrollment')" style="margin-top:0.75rem;">View All →</button>
+          </div>
+          <div class="glass-card">
+            <h3 style="font-family:'Fredoka One',cursive;font-size:1rem;letter-spacing:0.06em;margin-bottom:1.25rem;color:var(--text-secondary);">🚀 RECENT QUESTS</h3>
+            <div id="overview-quiz-list"><div class="empty-state"><span>📭</span>No quests deployed yet</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="showTab('quizzes')" style="margin-top:0.75rem;">View All →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ENROLLMENT ══ -->
+      <div id="tab-enrollment" class="page-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">👥 Hero Enrollment</h1>
+            <p class="section-sub">Approve or reject student registrations</p>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="filterEnrollment('pending',this)">⏳ Pending</button>
+          <button class="tab-btn" onclick="filterEnrollment('approved',this)">✅ Approved</button>
+          <button class="tab-btn" onclick="filterEnrollment('rejected',this)">❌ Rejected</button>
+          <button class="tab-btn" onclick="filterEnrollment('all',this)">🌍 All</button>
+        </div>
+        <div id="enrollment-list"><div class="spinner"></div></div>
+      </div>
+
+      <!-- ══ DEPLOY HUB ══ -->
+      <div id="tab-deploy" class="page-section">
+        <h1 class="section-title">🚀 Deploy Hub</h1>
+        <p class="section-sub">Choose what type of quest to unleash upon your heroes</p>
+
+        <div class="deploy-grid">
+          <div class="deploy-card adventure-deploy" onclick="showTab('adventure')">
+            <span class="deploy-icon">🗺️</span>
+            <h3 style="color:var(--finn-blue);">Deploy Adventure</h3>
+            <p>Upload lesson PDFs — automatically converted into an epic, game-like interactive lesson experience.</p>
+            <button class="btn btn-cyan btn-sm" style="margin-top:1.25rem;">Open Adventure Deploy →</button>
+          </div>
+
+          <div class="deploy-card training-deploy" onclick="showTab('training')">
+            <span class="deploy-icon">🐦</span>
+            <h3 style="color:var(--jake-yellow);">Training Camp</h3>
+            <p>Upload an HTML quiz — transformed into a Flappy Bird-style game with power-ups for practice!</p>
+            <button class="btn btn-gold btn-sm" style="margin-top:1.25rem;">Open Training Camp →</button>
+          </div>
+
+          <div class="deploy-card arena-deploy" onclick="showTab('arena')">
+            <span class="deploy-icon">🏟️</span>
+            <h3 style="color:var(--princess-pink);">Arena</h3>
+            <p>Upload an HTML quiz — converted into a thrilling game show summative assessment battle!</p>
+            <button class="btn btn-magenta btn-sm" style="margin-top:1.25rem;">Open Arena Deploy →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ DEPLOY ADVENTURE (PDF Lessons) ══ -->
+      <div id="tab-adventure" class="page-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">🗺️ Deploy Adventure</h1>
+            <p class="section-sub">Upload a PDF lesson — auto-converted into a gamified adventure!</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showTab('deploy')">← Back</button>
+        </div>
+
+        <div class="glass-card" style="max-width:680px;">
+          <div style="background:rgba(0,170,255,0.08);border:2px solid rgba(0,170,255,0.25);border-radius:14px;padding:1rem;margin-bottom:1.5rem;font-size:0.82rem;color:var(--finn-blue);font-weight:700;line-height:1.6;">
+            📖 <strong>How it works:</strong> Upload your lesson as a PDF. The AI wizard will automatically break it into game-like sections, learning checkpoints, and interactive quizzes — ready for students in the Adventure Zone!
+          </div>
+          <div class="form-group">
+            <label class="form-label">Lesson Title</label>
+            <input type="text" id="adv-title" class="form-control" placeholder="e.g. Chapter 3: The Water Cycle" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject / Topic</label>
+            <input type="text" id="adv-subject" class="form-control" placeholder="e.g. Science — Earth Systems" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Allowed Sections</label>
+            <select id="adv-sections" class="form-control" multiple style="height:110px;">
+              <option value="11A" selected>Grade 11-A</option>
+              <option value="11B" selected>Grade 11-B</option>
+              <option value="11C" selected>Grade 11-C</option>
+              <option value="11D" selected>Grade 11-D</option>
+              <option value="DEMO" selected>DEMO</option>
+            </select>
+          </div>
+
+          <label class="form-label">PDF Lesson File</label>
+          <div class="upload-zone" id="pdf-upload-zone" onclick="document.getElementById('pdf-input').click()">
+            <div class="upload-icon">📄</div>
+            <p><strong>Click or drag & drop</strong> your PDF lesson here</p>
+            <p style="margin-top:0.5rem;font-size:0.78rem;">Supports: .pdf files — Wizard AI will gamify them automatically!</p>
+          </div>
+          <input type="file" id="pdf-input" accept=".pdf" class="hidden" onchange="handlePDFUpload(this)" />
+
+          <div id="pdf-preview" class="hidden" style="margin-top:1.25rem;">
+            <div class="upload-preview">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                <h4 style="font-family:'Fredoka One',cursive;font-size:0.9rem;">📡 PDF DETECTED</h4>
+                <span id="pdf-filename" class="badge badge-cyan"></span>
+              </div>
+              <p style="font-size:0.85rem;color:var(--text-secondary);font-weight:600;">✅ PDF ready to deploy as an Adventure lesson. Students will experience it as an interactive game-like journey!</p>
+            </div>
+            <div style="display:flex;gap:1rem;margin-top:1.25rem;">
+              <button class="btn btn-cyan" style="flex:1;" onclick="deployAdventure()">🗺️ Deploy Adventure!</button>
+              <button class="btn btn-ghost" onclick="clearPDF()">✕ Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TRAINING CAMP (Practice — Flappy Bird style) ══ -->
+      <div id="tab-training" class="page-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">🐦 Training Camp Deploy</h1>
+            <p class="section-sub">Upload an HTML quiz — we'll turn it into a Flappy Bird game with power-ups!</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showTab('deploy')">← Back</button>
+        </div>
+
+        <div class="glass-card" style="max-width:680px;">
+          <div style="background:rgba(255,215,0,0.08);border:2px solid rgba(255,215,0,0.25);border-radius:14px;padding:1rem;margin-bottom:1.5rem;font-size:0.82rem;color:var(--jake-yellow);font-weight:700;line-height:1.6;">
+            🐦 <strong>How it works:</strong> Upload an HTML quiz with questions. Heroes will flap through obstacles — answer correctly to gain speed boosts and power-ups! Great for practice assessments.
+          </div>
+          <div class="form-group">
+            <label class="form-label">Training Mission Title</label>
+            <input type="text" id="tc-title" class="form-control" placeholder="e.g. Math Sprint — Algebra" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject / Topic</label>
+            <input type="text" id="tc-subject" class="form-control" placeholder="e.g. Math — Algebra" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time Limit (minutes)</label>
+            <input type="number" id="tc-time" class="form-control" placeholder="15" min="1" max="180" value="15" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Allowed Sections</label>
+            <select id="tc-sections" class="form-control" multiple style="height:110px;">
+              <option value="11A" selected>Grade 11-A</option>
+              <option value="11B" selected>Grade 11-B</option>
+              <option value="11C" selected>Grade 11-C</option>
+              <option value="11D" selected>Grade 11-D</option>
+              <option value="DEMO" selected>DEMO</option>
+            </select>
+          </div>
+
+          <label class="form-label">HTML Quiz File</label>
+          <div class="upload-zone" id="tc-upload-zone" onclick="document.getElementById('tc-input').click()">
+            <div class="upload-icon">🐦</div>
+            <p><strong>Click or drag & drop</strong> your HTML quiz file</p>
+            <p style="margin-top:0.5rem;font-size:0.78rem;">Supports: .html files with numbered questions and A–D options</p>
+          </div>
+          <input type="file" id="tc-input" accept=".html,.htm" class="hidden" onchange="handleTrainingUpload(this)" />
+
+          <div id="tc-preview" class="hidden">
+            <div class="upload-preview">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                <h4 style="font-family:'Fredoka One',cursive;font-size:0.9rem;">📡 PARSED QUESTIONS</h4>
+                <span id="tc-q-count" class="badge badge-gold">0 questions</span>
+              </div>
+              <div id="tc-questions-preview" style="max-height:260px;overflow-y:auto;"></div>
+            </div>
+            <div style="display:flex;gap:1rem;margin-top:1.25rem;">
+              <button class="btn btn-gold" style="flex:1;" onclick="deployTraining()">🐦 Deploy Training Camp!</button>
+              <button class="btn btn-ghost" onclick="clearTraining()">✕ Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ARENA (Summative — Game Show) ══ -->
+      <div id="tab-arena" class="page-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">🏟️ Arena Deploy</h1>
+            <p class="section-sub">Upload an HTML quiz — converted into a thrilling game show showdown!</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showTab('deploy')">← Back</button>
+        </div>
+
+        <div class="glass-card" style="max-width:680px;">
+          <div style="background:rgba(255,105,180,0.08);border:2px solid rgba(255,105,180,0.25);border-radius:14px;padding:1rem;margin-bottom:1.5rem;font-size:0.82rem;color:var(--princess-pink);font-weight:700;line-height:1.6;">
+            🏟️ <strong>How it works:</strong> Upload an HTML quiz. Students compete in a game show format — timed buzzer rounds, dramatic reveals, leaderboard tracking! This is a summative assessment: answers are hidden until the end.
+          </div>
+          <div class="form-group">
+            <label class="form-label">Arena Battle Title</label>
+            <input type="text" id="arena-title" class="form-control" placeholder="e.g. Final Battle — Chapter 5" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject / Topic</label>
+            <input type="text" id="arena-subject" class="form-control" placeholder="e.g. Science — Final Exam" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time Limit (minutes)</label>
+            <input type="number" id="arena-time" class="form-control" placeholder="30" min="1" max="180" value="30" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Allowed Sections</label>
+            <select id="arena-sections" class="form-control" multiple style="height:110px;">
+              <option value="11A" selected>Grade 11-A</option>
+              <option value="11B" selected>Grade 11-B</option>
+              <option value="11C" selected>Grade 11-C</option>
+              <option value="11D" selected>Grade 11-D</option>
+              <option value="DEMO" selected>DEMO</option>
+            </select>
+          </div>
+
+          <label class="form-label">HTML Quiz File</label>
+          <div class="upload-zone" id="arena-upload-zone" onclick="document.getElementById('arena-input').click()">
+            <div class="upload-icon">🏟️</div>
+            <p><strong>Click or drag & drop</strong> your HTML quiz file</p>
+            <p style="margin-top:0.5rem;font-size:0.78rem;">Summative mode: answers are hidden; only final scores shown to students</p>
+          </div>
+          <input type="file" id="arena-input" accept=".html,.htm" class="hidden" onchange="handleArenaUpload(this)" />
+
+          <div id="arena-preview" class="hidden">
+            <div class="upload-preview">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                <h4 style="font-family:'Fredoka One',cursive;font-size:0.9rem;">📡 PARSED QUESTIONS</h4>
+                <span id="arena-q-count" class="badge badge-magenta">0 questions</span>
+              </div>
+              <div id="arena-questions-preview" style="max-height:260px;overflow-y:auto;"></div>
+            </div>
+            <div style="display:flex;gap:1rem;margin-top:1.25rem;">
+              <button class="btn btn-magenta" style="flex:1;" onclick="deployArena()">🏟️ Deploy Arena Battle!</button>
+              <button class="btn btn-ghost" onclick="clearArena()">✕ Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ QUEST PORTAL ══ -->
+      <div id="tab-quizzes" class="page-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">📋 Quest Portal</h1>
+            <p class="section-sub">Manage all deployed quests</p>
+          </div>
+          <button class="btn btn-green btn-sm" onclick="resyncAllQuizzes()">☁ Sync to Sheets</button>
+        </div>
+        <div id="sync-status" style="display:none;background:rgba(0,170,255,0.08);border:2px solid rgba(0,170,255,0.2);border-radius:12px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:var(--finn-blue);font-weight:700;"></div>
+        <div id="quiz-portal-list"></div>
+      </div>
+
+      <!-- ══ RECORDS ══ -->
+      <div id="tab-records" class="page-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">📊 Mission Records</h1>
+            <p class="section-sub">Student scores, analytics, and achievements</p>
+          </div>
+          <button class="btn btn-green btn-sm" onclick="downloadRecords()">⬇ Export CSV</button>
+        </div>
+
+        <!-- Filters -->
+        <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;margin-bottom:1.5rem;">
+          <div style="display:flex;gap:0.25rem;background:rgba(0,0,0,0.3);padding:0.3rem;border-radius:50px;border:2px solid var(--glass-border);">
+            <button class="rec-sec-btn active-sec" data-sec="all" onclick="setSection('all',this)">All</button>
+            <button class="rec-sec-btn" data-sec="11A" onclick="setSection('11A',this)">11A</button>
+            <button class="rec-sec-btn" data-sec="11B" onclick="setSection('11B',this)">11B</button>
+            <button class="rec-sec-btn" data-sec="11C" onclick="setSection('11C',this)">11C</button>
+            <button class="rec-sec-btn" data-sec="11D" onclick="setSection('11D',this)">11D</button>
+            <button class="rec-sec-btn" data-sec="DEMO" onclick="setSection('DEMO',this)">DEMO</button>
+          </div>
+          <select id="records-quiz-filter" class="form-control" style="width:auto;min-width:180px;padding:0.4rem 0.9rem;font-size:0.85rem;" onchange="applyRecordFilters()">
+            <option value="all">All Quests</option>
+          </select>
+          <select id="records-cat-filter" class="form-control" style="width:auto;min-width:160px;padding:0.4rem 0.9rem;font-size:0.85rem;" onchange="applyRecordFilters()">
+            <option value="all">All Types</option>
+            <option value="adventure">🗺️ Adventure</option>
+            <option value="practice">🐦 Training</option>
+            <option value="assessment">🏟️ Arena</option>
+          </select>
+          <input type="text" id="records-search" class="form-control" placeholder="🔍 Search student..." style="width:auto;min-width:180px;flex:1;padding:0.45rem 0.9rem;font-size:0.85rem;" oninput="applyRecordFilters()" />
+          <select id="records-sort" class="form-control" style="width:auto;min-width:150px;padding:0.4rem 0.9rem;font-size:0.85rem;" onchange="applyRecordFilters()">
+            <option value="date-desc">Newest First</option>
+            <option value="date-asc">Oldest First</option>
+            <option value="score-desc">Highest Score</option>
+            <option value="score-asc">Lowest Score</option>
+            <option value="name-asc">Name A–Z</option>
+          </select>
+        </div>
+
+        <div id="records-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1.25rem;"></div>
+
+        <div class="glass-card" style="padding:0;overflow:hidden;overflow-x:auto;">
+          <table class="data-table" style="min-width:700px;">
+            <thead>
+              <tr>
+                <th>Hero</th><th>Section</th><th>Quest</th><th>Type</th>
+                <th>Score</th><th>Tab ⚠</th><th>Date</th><th>XP</th>
+              </tr>
+            </thead>
+            <tbody id="records-body">
+              <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Loading records...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="records-count" style="margin-top:0.75rem;font-size:0.78rem;color:var(--text-muted);text-align:right;font-weight:700;"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Teacher Gate -->
+  <div id="teacher-gate" style="display:none;position:fixed;inset:0;background:var(--bg-deep);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:var(--glass-bg);border:2px solid var(--glass-border);border-radius:24px;padding:2.5rem;max-width:400px;width:90%;text-align:center;backdrop-filter:blur(20px);">
+      <div style="font-size:3.5rem;margin-bottom:1rem;">🧙</div>
+      <h2 style="font-family:'Fredoka One',cursive;font-size:1.3rem;margin-bottom:0.25rem;">WIZARD COMMAND TOWER</h2>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1.5rem;font-weight:700;">Enter your magic password to continue</p>
+      <input type="password" id="gate-pw" class="form-control" placeholder="Teacher password" onkeydown="if(event.key==='Enter')gateLogin()" style="margin-bottom:0.75rem;" />
+      <div id="gate-err" style="color:var(--danger);font-size:0.82rem;font-weight:700;margin-bottom:0.75rem;display:none;"></div>
+      <button onclick="gateLogin()" class="btn btn-cyan btn-block" style="margin-bottom:0.75rem;">Enter Command Tower ⚡</button>
+      <a href="index.html" style="color:var(--text-muted);font-size:0.8rem;text-decoration:none;font-weight:700;">← Back to Land of Ooo</a>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    // Init background
+    (function() {
+      const bg = document.getElementById('ooo-bg');
+      for (let i = 0; i < 150; i++) {
+        const s = document.createElement('div'); s.className = 'ooo-star';
+        const sz = Math.random()*2+0.5;
+        s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${Math.random()*4+2}s;animation-delay:${Math.random()*5}s;opacity:${Math.random()*0.5+0.1};`;
+        bg.appendChild(s);
+      }
+    })();
+
+    // Auth gate
+    (function() {
+      const s = getSession();
+      const gate = document.getElementById('teacher-gate');
+      if (!s || s.role !== 'teacher') {
+        const pw = localStorage.getItem('solomon_teacher_pw');
+        if (pw) { gate.style.display = 'flex'; }
+        else { setSession({ role: 'teacher' }); renderOverview(); }
+      } else { renderOverview(); }
+    })();
+
+    function gateLogin() {
+      const pw = localStorage.getItem('solomon_teacher_pw');
+      const entered = document.getElementById('gate-pw').value;
+      const errEl = document.getElementById('gate-err');
+      if (entered === pw) {
+        setSession({ role: 'teacher' });
+        document.getElementById('teacher-gate').style.display = 'none';
+        renderOverview();
+      } else {
+        errEl.textContent = '✕ Wrong password, wizard. Try again!';
+        errEl.style.display = 'block';
+        document.getElementById('gate-pw').value = '';
+        document.getElementById('gate-pw').focus();
+      }
+    }
+
+    let parsedQuestionsTC = [], parsedQuestionsArena = [];
+    let currentFilter = 'pending';
+
+    /* ══ TABS ══ */
+    function showTab(name) {
+      document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+      const tab = document.getElementById('tab-' + name);
+      if (tab) tab.classList.add('active');
+      // Highlight sidebar
+      document.querySelectorAll('.sidebar-item').forEach(btn => {
+        const fn = btn.getAttribute('onclick')||'';
+        if (fn.includes(`'${name}'`)) btn.classList.add('active');
+      });
+      if (name==='overview') renderOverview();
+      if (name==='enrollment') renderEnrollment();
+      if (name==='quizzes') renderQuizPortal();
+      if (name==='records') renderRecords();
+    }
+
+    /* ══ OVERVIEW ══ */
+    async function fixSheets() {
+      showToast('Fixing sheet headers...', 'info');
+      const r = await sheetsGet('fixSheets', {});
+      if (r.ok) { showToast('✅ Sheets fixed!', 'success'); setTimeout(()=>renderOverview(), 1500); }
+      else showToast('Error: ' + (r.error||'unknown'), 'error');
+    }
+
+    async function runDiagnostic() {
+      const box = document.getElementById('diagnostic-box');
+      box.style.display = 'block';
+      box.textContent = 'Running diagnostics...\n';
+      const url = getApiUrl();
+      box.textContent += `API URL: ${url ? url.substring(0,60)+'...' : 'NOT SET ❌'}\n`;
+      if (!url) { box.textContent += 'Fix: paste your Apps Script URL in ⚙ Setup\n'; return; }
+      try {
+        box.textContent += 'Testing getStudents...\n';
+        const r = await sheetsGet('getStudents');
+        if (r.ok) box.textContent += `✅ Students in Sheets: ${r.students.length}\n`;
+        else box.textContent += `❌ Error: ${r.error}\n`;
+        box.textContent += 'Testing getQuizzes...\n';
+        const r2 = await sheetsGet('getQuizzes', {});
+        if (r2.ok) box.textContent += `✅ Quizzes in Sheets: ${r2.quizzes.length}\n`;
+        else box.textContent += `❌ Error: ${r2.error}\n`;
+      } catch(e) { box.textContent += `Network error: ${e.message}\n`; }
+    }
+
+    async function renderOverview() {
+      document.getElementById('overview-pending-list').innerHTML = '<div class="spinner" style="margin:1.5rem auto;"></div>';
+      document.getElementById('overview-quiz-list').innerHTML = '<div class="spinner" style="margin:1.5rem auto;"></div>';
+      const [students, scores, sheetsQuizResult] = await Promise.all([getStudents(), getScores(), sheetsGet('getQuizzes', {})]);
+      const sheetsQuizzes = (sheetsQuizResult.ok && sheetsQuizResult.quizzes) ? sheetsQuizResult.quizzes.map(q => {
+        if (typeof q.questions==='string') { try { q.questions=JSON.parse(q.questions); } catch { q.questions=[]; } }
+        return q;
+      }) : [];
+      const localQuizzes = getQuizzes();
+      const sheetIds = new Set(sheetsQuizzes.map(q=>String(q.id)));
+      const quizzes = [...sheetsQuizzes, ...localQuizzes.filter(q=>!sheetIds.has(String(q.id)))];
+      document.getElementById('stat-students').textContent = students.filter(s=>s.status==='approved').length;
+      document.getElementById('stat-pending').textContent = students.filter(s=>s.status==='pending').length;
+      document.getElementById('stat-quizzes').textContent = quizzes.length;
+      document.getElementById('stat-scores').textContent = scores.length;
+      const pending = students.filter(s=>s.status==='pending').slice(0,3);
+      document.getElementById('overview-pending-list').innerHTML = pending.length
+        ? pending.map(s => `<div class="pending-card">
+            <div class="student-avatar-sm">${getAvatarById(s.avatar||'pika').emoji}</div>
+            <div class="pending-info"><h4>${s.name}</h4><p>${s.section} · ${s.email}</p></div>
+            <div class="pending-actions">
+              <button class="btn btn-green btn-sm" onclick="approveStudent('${s.email}')">✓ Bless</button>
+              <button class="btn btn-sm" style="background:rgba(255,68,68,0.12);color:#ff4444;border:1px solid rgba(255,68,68,0.3);" onclick="rejectStudent('${s.email}')">✕</button>
+            </div></div>`).join('')
+        : '<div class="empty-state"><span>🎉</span>No pending students</div>';
+      const recentQ = quizzes.slice(-3).reverse();
+      const catIcon = c => c==='adventure'||c==='lesson'?'🗺️':c==='training'?'🐦':'🏟️';
+      document.getElementById('overview-quiz-list').innerHTML = recentQ.length
+        ? recentQ.map(q => `<div class="quiz-list-item">
+            <span style="font-size:1.8rem;">${catIcon(q.category||'practice')}</span>
+            <div class="quiz-meta"><h4>${q.title}</h4><p>${Array.isArray(q.questions)?q.questions.length:0} questions · ${formatDate(q.createdAt)}</p></div>
+            <span class="badge ${q.locked?'badge-gray':'badge-green'}">${q.locked?'Locked':'Active'}</span>
+          </div>`).join('')
+        : '<div class="empty-state"><span>📭</span>No quests deployed yet</div>';
+    }
+
+    /* ══ ENROLLMENT ══ */
+    async function renderEnrollment() {
+      showLoading('enrollment-list', 'Loading heroes...');
+      const students = await getStudents();
+      const filtered = currentFilter==='all' ? students : students.filter(s=>s.status===currentFilter);
+      const list = document.getElementById('enrollment-list');
+      list.innerHTML = filtered.length ? filtered.map(s => `
+        <div class="pending-card">
+          <div class="student-avatar-sm">${getAvatarById(s.avatar||'pika').emoji}</div>
+          <div class="pending-info">
+            <h4>${s.name} <span class="badge ${s.status==='approved'?'badge-green':s.status==='rejected'?'badge-magenta':'badge-gold'}" style="margin-left:0.5rem;">${s.status.toUpperCase()}</span></h4>
+            <p>${s.email} · Section ${s.section} · Registered ${timeAgo(s.createdAt)}</p>
+          </div>
+          <div class="pending-actions">
+            ${s.status!=='approved'?`<button class="btn btn-green btn-sm" onclick="approveStudent('${s.email}')">✓ Bless</button>`:''}
+            ${s.status!=='rejected'?`<button class="btn btn-sm" style="background:rgba(255,68,68,0.12);color:#ff4444;border:1px solid rgba(255,68,68,0.3);" onclick="rejectStudent('${s.email}')">Reject</button>`:''}
+          </div></div>`).join('')
+        : `<div class="empty-state"><span>🌌</span>No ${currentFilter} heroes found</div>`;
+    }
+
+    function filterEnrollment(status, btn) {
+      currentFilter = status;
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderEnrollment();
+    }
+
+    async function approveStudent(email) {
+      bustStudentCache(email);
+      await updateStudent(email, { status: 'approved' });
+      showToast('Hero blessed! Mathematical! ⚡', 'success');
+      renderEnrollment(); renderOverview();
+    }
+    async function rejectStudent(email) {
+      if (!confirm('Reject this student?')) return;
+      bustStudentCache(email);
+      await updateStudent(email, { status: 'rejected' });
+      showToast('Student rejected.', 'error');
+      renderEnrollment(); renderOverview();
+    }
+
+    /* ══ ADVENTURE DEPLOY (PDF) ══ */
+    let adventurePDF = null;
+
+    function handlePDFUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+      adventurePDF = file;
+      document.getElementById('pdf-filename').textContent = file.name;
+      document.getElementById('pdf-preview').classList.remove('hidden');
+      showToast(`PDF loaded: ${file.name} 📄`, 'success');
+    }
+
+    const pdfZone = document.getElementById('pdf-upload-zone');
+    if (pdfZone) {
+      pdfZone.addEventListener('dragover', e=>{e.preventDefault();pdfZone.classList.add('drag-over');});
+      pdfZone.addEventListener('dragleave',()=>pdfZone.classList.remove('drag-over'));
+      pdfZone.addEventListener('drop',e=>{e.preventDefault();pdfZone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f){const inp=document.getElementById('pdf-input');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;handlePDFUpload(inp);}});
+    }
+
+    function deployAdventure() {
+      const title = document.getElementById('adv-title').value.trim();
+      const subject = document.getElementById('adv-subject').value.trim();
+      if (!title) { showToast('Enter a lesson title!', 'error'); return; }
+      if (!adventurePDF) { showToast('Upload a PDF lesson!', 'error'); return; }
+      const sections = [...document.getElementById('adv-sections').selectedOptions].map(o=>o.value);
+      // Deploy as an adventure lesson (stored with category 'adventure', 1 placeholder question)
+      saveQuiz({ title, subject, time: 30, sections, category: 'adventure', questions: [{question:'PDF Lesson ('+adventurePDF.name+')',options:['Start Learning'],correct:0}], locked: false, lessonType: 'pdf' });
+      showToast(`Adventure "${title}" deployed! Heroes can start their journey! 🗺️`, 'success');
+      clearPDF();
+      document.getElementById('adv-title').value = '';
+      document.getElementById('adv-subject').value = '';
+    }
+
+    function clearPDF() { adventurePDF = null; document.getElementById('pdf-preview').classList.add('hidden'); document.getElementById('pdf-input').value = ''; }
+
+    /* ══ TRAINING CAMP DEPLOY (Flappy Bird) ══ */
+    function handleTrainingUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        parsedQuestionsTC = parseQuizHTML(e.target.result);
+        if (!parsedQuestionsTC.length) { showToast('Could not detect questions. Check the HTML format.', 'error'); return; }
+        document.getElementById('tc-q-count').textContent = parsedQuestionsTC.length + ' questions';
+        const prev = document.getElementById('tc-questions-preview');
+        prev.innerHTML = parsedQuestionsTC.slice(0,5).map((q,i) => `
+          <div class="question-preview">
+            <strong style="font-size:0.8rem;color:var(--jake-yellow);">Q${i+1}.</strong> ${q.question}
+            <div style="margin-top:0.4rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+              ${q.options.map((o,oi)=>`<span class="badge ${oi===q.correct?'badge-gold':'badge-gray'}">${String.fromCharCode(65+oi)}) ${o.substring(0,30)}${o.length>30?'…':''}</span>`).join('')}
+            </div></div>`).join('') + (parsedQuestionsTC.length>5?`<p style="color:var(--text-muted);font-size:0.8rem;text-align:center;padding:0.5rem;">... and ${parsedQuestionsTC.length-5} more questions</p>`:'');
+        document.getElementById('tc-preview').classList.remove('hidden');
+        showToast(`Parsed ${parsedQuestionsTC.length} training questions!`, 'success');
+      };
+      reader.readAsText(file);
+    }
+
+    // TC drag/drop
+    const tcZone = document.getElementById('tc-upload-zone');
+    if (tcZone) {
+      tcZone.addEventListener('dragover',e=>{e.preventDefault();tcZone.classList.add('drag-over');});
+      tcZone.addEventListener('dragleave',()=>tcZone.classList.remove('drag-over'));
+      tcZone.addEventListener('drop',e=>{e.preventDefault();tcZone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f){const inp=document.getElementById('tc-input');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;handleTrainingUpload(inp);}});
+    }
+
+    function deployTraining() {
+      const title = document.getElementById('tc-title').value.trim();
+      const subject = document.getElementById('tc-subject').value.trim();
+      const time = parseInt(document.getElementById('tc-time').value)||15;
+      if (!title) { showToast('Enter a training title!', 'error'); return; }
+      if (!parsedQuestionsTC.length) { showToast('No questions to deploy!', 'error'); return; }
+      const sections = [...document.getElementById('tc-sections').selectedOptions].map(o=>o.value);
+      saveQuiz({ title, subject, time, sections, category:'training', questions: parsedQuestionsTC, locked: false });
+      showToast(`Training Camp "${title}" deployed! Time to flap! 🐦`, 'success');
+      clearTraining();
+      document.getElementById('tc-title').value = '';
+      document.getElementById('tc-subject').value = '';
+    }
+
+    function clearTraining() { parsedQuestionsTC=[]; document.getElementById('tc-preview').classList.add('hidden'); document.getElementById('tc-input').value=''; }
+
+    /* ══ ARENA DEPLOY (Game Show / Summative) ══ */
+    function handleArenaUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        parsedQuestionsArena = parseQuizHTML(e.target.result);
+        if (!parsedQuestionsArena.length) { showToast('Could not detect questions. Check the HTML format.', 'error'); return; }
+        document.getElementById('arena-q-count').textContent = parsedQuestionsArena.length + ' questions';
+        const prev = document.getElementById('arena-questions-preview');
+        prev.innerHTML = parsedQuestionsArena.slice(0,5).map((q,i)=>`
+          <div class="question-preview">
+            <strong style="font-size:0.8rem;color:var(--princess-pink);">Q${i+1}.</strong> ${q.question}
+            <div style="margin-top:0.4rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+              ${q.options.map((o,oi)=>`<span class="badge ${oi===q.correct?'badge-magenta':'badge-gray'}">${String.fromCharCode(65+oi)}) ${o.substring(0,30)}${o.length>30?'…':''}</span>`).join('')}
+            </div></div>`).join('') + (parsedQuestionsArena.length>5?`<p style="color:var(--text-muted);font-size:0.8rem;text-align:center;padding:0.5rem;">... and ${parsedQuestionsArena.length-5} more questions</p>`:'');
+        document.getElementById('arena-preview').classList.remove('hidden');
+        showToast(`Parsed ${parsedQuestionsArena.length} arena questions!`, 'success');
+      };
+      reader.readAsText(file);
+    }
+
+    const arenaZone = document.getElementById('arena-upload-zone');
+    if (arenaZone) {
+      arenaZone.addEventListener('dragover',e=>{e.preventDefault();arenaZone.classList.add('drag-over');});
+      arenaZone.addEventListener('dragleave',()=>arenaZone.classList.remove('drag-over'));
+      arenaZone.addEventListener('drop',e=>{e.preventDefault();arenaZone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f){const inp=document.getElementById('arena-input');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;handleArenaUpload(inp);}});
+    }
+
+    function deployArena() {
+      const title = document.getElementById('arena-title').value.trim();
+      const subject = document.getElementById('arena-subject').value.trim();
+      const time = parseInt(document.getElementById('arena-time').value)||30;
+      if (!title) { showToast('Enter an arena battle title!', 'error'); return; }
+      if (!parsedQuestionsArena.length) { showToast('No questions to deploy!', 'error'); return; }
+      const sections = [...document.getElementById('arena-sections').selectedOptions].map(o=>o.value);
+      saveQuiz({ title, subject, time, sections, category:'assessment', questions: parsedQuestionsArena, locked: false });
+      showToast(`Arena Battle "${title}" deployed! Let the showdown begin! 🏟️`, 'success');
+      clearArena();
+      document.getElementById('arena-title').value = '';
+      document.getElementById('arena-subject').value = '';
+    }
+
+    function clearArena() { parsedQuestionsArena=[]; document.getElementById('arena-preview').classList.add('hidden'); document.getElementById('arena-input').value=''; }
+
+    /* ══ QUEST PORTAL ══ */
+    let _portalQuizzes = [], _portalScores = [];
+
+    async function resyncAllQuizzes() {
+      let local = getQuizzes();
+      if (!local.length) { showToast('No local quizzes found. Try uploading one first.', 'error'); return; }
+      const statusEl = document.getElementById('sync-status');
+      statusEl.style.display = 'block';
+      statusEl.textContent = `Syncing ${local.length} quest(s) to Google Sheets...`;
+      let synced = 0;
+      for (const q of local) {
+        const r = await sheetsPost('addQuiz', { id:String(q.id), title:q.title, subject:q.subject||'', time:String(q.time||15), sections:(q.sections||[]).join(','), locked:String(q.locked||false), category:q.category||'practice', questions:JSON.stringify(q.questions||[]), createdAt:q.createdAt||new Date().toISOString() });
+        if (r.ok || r.error==='duplicate') synced++;
+        statusEl.textContent = `Syncing... ${synced}/${local.length}`;
+      }
+      statusEl.textContent = `✅ Synced ${synced}/${local.length} quests!`;
+      showToast(`${synced} quest(s) synced to Sheets! ☁`, 'success');
+      setTimeout(()=>{statusEl.style.display='none';renderQuizPortal();}, 4000);
+    }
+
+    async function renderQuizPortal() {
+      const list = document.getElementById('quiz-portal-list');
+      showLoading(list, 'Loading quests from the cloud...');
+      const [sheetsResult, allScores] = await Promise.all([sheetsGet('getQuizzes',{}), getScores()]);
+      _portalScores = allScores;
+      const sheetsQuizzes = sheetsResult.ok && sheetsResult.quizzes ? sheetsResult.quizzes.map(q=>{
+        if(typeof q.questions==='string'){try{q.questions=JSON.parse(q.questions);}catch{q.questions=[];}}
+        if(typeof q.sections==='string') q.sections=q.sections.split(',').map(s=>s.trim());
+        return q;
+      }) : [];
+      const localQuizzes = getQuizzes();
+      const sheetIds = new Set(sheetsQuizzes.map(q=>String(q.id)));
+      const merged = [...sheetsQuizzes, ...localQuizzes.filter(q=>!sheetIds.has(String(q.id)))];
+      _portalQuizzes = merged;
+      if (!merged.length) { list.innerHTML='<div class="empty-state"><span>🏰</span>No quests deployed yet. Use Deploy Hub!</div>'; return; }
+      const catIcon = c => c==='adventure'||c==='lesson'?'🗺️':c==='training'?'🐦':'🏟️';
+      const catLabel = c => c==='adventure'||c==='lesson'?'Adventure':c==='training'?'Training':'Arena';
+      const catBadge = c => c==='adventure'||c==='lesson'?'badge-cyan':c==='training'?'badge-gold':'badge-magenta';
+      list.innerHTML = merged.slice().reverse().map(q=>{
+        const cat = q.category || 'practice';
+        const attempts = _portalScores.filter(s=>String(s.quizId)==String(q.id)).length;
+        const avg = attempts ? Math.round(_portalScores.filter(s=>String(s.quizId)==String(q.id)).reduce((a,b)=>a+(b.score/b.total*100),0)/attempts):0;
+        const qLen = Array.isArray(q.questions)?q.questions.length:0;
+        return `<div class="quiz-list-item glass-card" style="margin-bottom:1rem;padding:1.25rem;">
+          <span style="font-size:2rem;">${catIcon(cat)}</span>
+          <div class="quiz-meta" style="flex:1;">
+            <h4 style="font-size:1rem;font-weight:700;">${q.title}</h4>
+            <p>${q.subject||'General'} · ${qLen} questions · ${q.time}min · Sections: ${(q.sections||[]).join(', ')}</p>
+            <p style="margin-top:0.35rem;display:flex;align-items:center;gap:0.5rem;">
+              <span class="badge ${catBadge(cat)}">${catIcon(cat)} ${catLabel(cat)}</span>
+              <span style="color:var(--text-muted);font-size:0.78rem;font-weight:700;">${attempts} attempt(s) · Avg: ${avg}%</span>
+            </p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;align-items:flex-end;">
+            <span class="badge ${q.locked?'badge-gray':'badge-green'}">${q.locked?'🔒 Locked':'🔓 Active'}</span>
+            <div style="display:flex;gap:0.5rem;">
+              <button class="btn btn-ghost btn-sm" onclick="toggleQuizLock('${q.id}')">${q.locked?'🔓 Unlock':'🔒 Lock'}</button>
+              <button class="btn btn-ghost btn-sm" onclick="previewQuiz('${q.id}')">👁 Preview</button>
+              <button class="btn btn-ghost btn-sm" onclick="downloadQuizScores('${q.id}')">⬇ Export</button>
+            </div>
+          </div></div>`;
+      }).join('');
+    }
+
+    async function toggleQuizLock(id) {
+      const q = _portalQuizzes.find(q=>String(q.id)===String(id));
+      if (!q) return;
+      updateQuiz(id, { locked: !q.locked });
+      showToast(!q.locked?'Quest locked 🔒':'Quest unlocked 🔓');
+      renderQuizPortal();
+    }
+
+    function previewQuiz(id) { window.open(`quiz-play.html?id=${id}&preview=1`,'_blank'); }
+
+    async function downloadQuizScores(id) {
+      const q = _portalQuizzes.find(q=>String(q.id)===String(id));
+      const scores = _portalScores.filter(s=>String(s.quizId)==String(id));
+      if (!scores.length) { showToast('No scores for this quest yet','error'); return; }
+      const csv = ['Hero,Email,Section,Score,Total,Percent,Tab Switches,Date',
+        ...scores.map(s=>`"${s.name}","${s.email}","${s.section}",${s.score},${s.total},${Math.round(s.score/s.total*100)}%,${s.tabSwitches||0},"${formatDate(s.createdAt)}"`)
+      ].join('\n');
+      downloadCSV(csv, `${q?.title||'quest'}-scores.csv`);
+    }
+
+    /* ══ RECORDS ══ */
+    let _allScores = [], _activeSection = 'all';
+
+    async function renderRecords() {
+      document.getElementById('records-body').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);"><div class="spinner" style="margin:0 auto;"></div></td></tr>';
+      document.getElementById('records-summary').innerHTML = '';
+      _allScores = await getScores();
+      const quizSel = document.getElementById('records-quiz-filter');
+      const currentQuiz = quizSel.value;
+      const quizNames = [...new Map(_allScores.map(s=>[s.quizId, s.quizTitle])).entries()];
+      quizSel.innerHTML = '<option value="all">All Quests</option>' + quizNames.map(([id,title])=>`<option value="${id}">${title||'Quest #'+id}</option>`).join('');
+      if (currentQuiz && currentQuiz!=='all') quizSel.value = currentQuiz;
+      applyRecordFilters();
+    }
+
+    function setSection(sec, btn) {
+      _activeSection = sec;
+      document.querySelectorAll('.rec-sec-btn').forEach(b=>{b.classList.remove('active-sec');});
+      btn.classList.add('active-sec');
+      applyRecordFilters();
+    }
+
+    function applyRecordFilters() {
+      const search = (document.getElementById('records-search')?.value||'').toLowerCase();
+      const quizId = document.getElementById('records-quiz-filter')?.value||'all';
+      const cat    = document.getElementById('records-cat-filter')?.value||'all';
+      const sortBy = document.getElementById('records-sort')?.value||'date-desc';
+      let scores = _allScores.slice();
+      if (_activeSection!=='all') scores=scores.filter(s=>s.section===_activeSection);
+      if (quizId!=='all') scores=scores.filter(s=>String(s.quizId)===String(quizId));
+      if (cat!=='all') scores=scores.filter(s=>(s.category||'practice')===cat);
+      if (search) scores=scores.filter(s=>(s.name||'').toLowerCase().includes(search)||(s.quizTitle||'').toLowerCase().includes(search)||(s.email||'').toLowerCase().includes(search));
+      scores.sort((a,b)=>{
+        if(sortBy==='date-desc') return new Date(b.createdAt)-new Date(a.createdAt);
+        if(sortBy==='date-asc')  return new Date(a.createdAt)-new Date(b.createdAt);
+        if(sortBy==='score-desc') return (b.score/b.total)-(a.score/a.total);
+        if(sortBy==='score-asc')  return (a.score/a.total)-(b.score/b.total);
+        if(sortBy==='name-asc')  return (a.name||'').localeCompare(b.name||'');
+        return 0;
+      });
+      const total=scores.length, avg=total?Math.round(scores.reduce((s,r)=>s+(r.score/r.total*100),0)/total):0;
+      const perfect=scores.filter(s=>s.score===s.total).length, flagged=scores.filter(s=>(s.tabSwitches||0)>0).length;
+      document.getElementById('records-summary').innerHTML=`
+        <div class="stat-card"><div class="stat-value" style="font-size:1.5rem;">${total}</div><div class="stat-label">Submissions</div></div>
+        <div class="stat-card"><div class="stat-value" style="font-size:1.5rem;color:var(--jake-yellow);">${avg}%</div><div class="stat-label">Avg Score</div></div>
+        <div class="stat-card"><div class="stat-value" style="font-size:1.5rem;color:var(--bmo-teal);">${perfect}</div><div class="stat-label">Perfect Scores</div></div>
+        <div class="stat-card"><div class="stat-value" style="font-size:1.5rem;color:${flagged>0?'#ff6666':'var(--bmo-teal)'};">${flagged}</div><div class="stat-label">Tab Switches ⚠</div></div>`;
+      const tbody = document.getElementById('records-body');
+      if (!scores.length) { tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted);">No records match current filters</td></tr>`; document.getElementById('records-count').textContent=''; return; }
+      const catIcon = c => c==='adventure'||c==='lesson'?'🗺️':c==='training'?'🐦':'🏟️';
+      tbody.innerHTML = scores.map(s=>{
+        const pct=Math.round(s.score/s.total*100);
+        const color=pct>=90?'badge-green':pct>=75?'badge-cyan':pct>=50?'badge-gold':'badge-magenta';
+        const tabs=s.tabSwitches||0;
+        const cat=s.category||'practice';
+        return `<tr>
+          <td><div style="font-weight:700;">${s.name||'—'}</div><div style="font-size:0.72rem;color:var(--text-muted);">${s.email||''}</div></td>
+          <td><span class="badge badge-gray">${s.section||'—'}</span></td>
+          <td style="max-width:180px;font-size:0.85rem;font-weight:600;">${s.quizTitle||'Quest #'+s.quizId}</td>
+          <td><span class="badge ${cat==='assessment'?'badge-magenta':cat==='adventure'||cat==='lesson'?'badge-cyan':'badge-gold'}" style="font-size:0.65rem;">${catIcon(cat)}</span></td>
+          <td><span class="badge ${color}">${s.score}/${s.total} (${pct}%)</span></td>
+          <td style="color:${tabs>0?'#ff6666':'var(--text-muted)'};">${tabs>0?`⚠ ${tabs}`:tabs}</td>
+          <td style="font-size:0.82rem;color:var(--text-secondary);">${formatDate(s.createdAt)}</td>
+          <td style="color:var(--finn-blue);font-family:'Fredoka One',cursive;font-size:0.9rem;">+${Math.round((s.score/s.total)*50)}</td>
+        </tr>`;
+      }).join('');
+      document.getElementById('records-count').textContent=`Showing ${scores.length} of ${_allScores.length} record${_allScores.length!==1?'s':''}`;
+    }
+
+    async function downloadRecords() {
+      if (!_allScores.length) _allScores = await getScores();
+      const search=(document.getElementById('records-search')?.value||'').toLowerCase();
+      const quizId=document.getElementById('records-quiz-filter')?.value||'all';
+      const cat=document.getElementById('records-cat-filter')?.value||'all';
+      let scores=_allScores.slice();
+      if(_activeSection!=='all') scores=scores.filter(s=>s.section===_activeSection);
+      if(quizId!=='all') scores=scores.filter(s=>String(s.quizId)===String(quizId));
+      if(cat!=='all') scores=scores.filter(s=>(s.category||'practice')===cat);
+      if(search) scores=scores.filter(s=>(s.name||'').toLowerCase().includes(search)||(s.quizTitle||'').toLowerCase().includes(search));
+      if(!scores.length){showToast('No records to export','error');return;}
+      const csv=['Hero,Email,Section,Quest,Category,Score,Total,Percent,Tab Switches,Date',
+        ...scores.map(s=>`"${s.name}","${s.email}","${s.section}","${s.quizTitle||''}","${s.category||'practice'}",${s.score},${s.total},${Math.round(s.score/s.total*100)}%,${s.tabSwitches||0},"${formatDate(s.createdAt)}"`)
+      ].join('\n');
+      downloadCSV(csv,'records.csv');
+      showToast(`Exported ${scores.length} record(s) ✓`,'success');
+    }
+
+    function downloadCSV(csv, filename) {
+      const blob=new Blob([csv],{type:'text/csv'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+    }
+
+    function doLogout() { clearSession(); window.location.href='index.html'; }
+
+    // Clock
+    function updateClock() {
+      const now=new Date();
+      document.getElementById('nav-time').textContent=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    }
+    setInterval(updateClock,1000); updateClock();
+  </script>
+</body>
+</html>

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Solomon — Quest Mode</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .quiz-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;background:rgba(1,8,24,0.95);border-bottom:1px solid var(--glass-border);backdrop-filter:blur(20px);position:sticky;top:0;z-index:50;}
+    .quiz-header-left{display:flex;align-items:center;gap:1rem;}
+    .timer-display{font-family:'Space Mono',monospace;font-size:1.1rem;color:var(--cosmic-cyan);background:rgba(0,212,255,0.08);padding:0.4rem 1rem;border-radius:50px;border:1px solid rgba(0,212,255,0.2);}
+    .timer-display.warn{color:var(--star-gold);border-color:rgba(245,197,24,0.3);}
+    .timer-display.danger{color:#ff4444;border-color:rgba(255,68,68,0.3);animation:tpulse 0.5s infinite;}
+    @keyframes tpulse{0%,100%{opacity:1}50%{opacity:0.4}}
+    .q-progress{display:flex;gap:4px;flex-wrap:wrap;max-width:300px;}
+    .q-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.1);transition:all 0.3s;}
+    .q-dot.done{background:var(--cosmic-green);}
+    .q-dot.current{background:var(--cosmic-cyan);box-shadow:0 0 6px var(--cosmic-cyan);}
+    .quiz-body{max-width:680px;margin:3rem auto;padding:0 2rem 4rem;}
+    .question-num{font-family:'Space Mono',monospace;font-size:0.72rem;letter-spacing:0.2em;color:var(--text-muted);margin-bottom:0.75rem;}
+    .question-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:2.5rem;margin-bottom:1.5rem;animation:slide-up 0.4s ease;}
+    .xp-flash{position:fixed;top:80px;right:2rem;font-family:'Orbitron',monospace;font-size:1.2rem;color:var(--cosmic-green);text-shadow:0 0 10px rgba(0,255,136,0.8);pointer-events:none;z-index:999;animation:xp-rise 1.2s ease forwards;}
+    @keyframes xp-rise{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-60px)}}
+    .result-screen{max-width:560px;margin:4rem auto;padding:0 2rem;text-align:center;}
+    .result-circle{width:140px;height:140px;border-radius:50%;margin:0 auto 1.5rem;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:2rem;font-weight:700;}
+    .answer-feedback{padding:0.75rem 1rem;border-radius:8px;margin-top:0.5rem;font-size:0.88rem;display:none;}
+    .stars-display{font-size:2rem;margin-bottom:1rem;letter-spacing:0.1em;}
+    /* ── ANTI-CHEAT OVERLAYS ── */
+    .ac-overlay{position:fixed;inset:0;z-index:99999;background:rgba(6,13,36,0.97);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(20px);}
+    .ac-overlay.hidden{display:none;}
+    .ac-box{text-align:center;padding:3rem 2.5rem;background:var(--galaxy-mid);border:2px solid #ef4444;border-radius:20px;max-width:380px;}
+    .ac-box h2{font-family:'Orbitron',monospace;font-size:1.8rem;color:#ef4444;margin:0.5rem 0;letter-spacing:0.05em;}
+    .ac-box p{color:var(--text-secondary);font-size:0.9rem;margin-bottom:1.5rem;line-height:1.5;}
+    .ac-box button{background:var(--star-gold);color:var(--galaxy-deep);border:none;padding:0.8rem 2rem;border-radius:10px;font-weight:800;cursor:pointer;font-family:'Orbitron',monospace;font-size:1rem;letter-spacing:0.05em;}
+    .watermark-ac{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-25deg);font-size:1rem;color:rgba(0,212,255,0.04);white-space:nowrap;pointer-events:none;z-index:9998;font-weight:800;letter-spacing:0.1em;user-select:none;}
+    .tab-counter{font-family:'Space Mono',monospace;font-size:0.7rem;color:#ef4444;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);padding:0.2rem 0.6rem;border-radius:50px;display:none;}
+    .tab-counter.visible{display:inline-block;}
+    @media print{body *{visibility:hidden!important;}body::after{content:"This quiz is protected. Printing is not allowed.";visibility:visible!important;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.5rem;font-weight:bold;color:red;text-align:center;}}
+  </style>
+</head>
+<body>
+<div id="starfield"></div>
+
+<!-- ── ANTI-CHEAT: Tab-switch overlay ── -->
+<div class="ac-overlay hidden" id="ac-overlay">
+  <div class="ac-box">
+    <div style="font-size:3rem;margin-bottom:0.5rem;">⚠️</div>
+    <h2>Focus Lost!</h2>
+    <p>You switched tabs or left the window.<br>This incident has been logged.</p>
+    <button onclick="resumeQuiz()">Return to Quiz</button>
+  </div>
+</div>
+
+<!-- ── ANTI-CHEAT: Screenshot blackout ── -->
+<div id="bko" style="display:none;position:fixed;inset:0;background:#000;z-index:999999;align-items:center;justify-content:center;flex-direction:column;gap:1rem;">
+  <div style="font-size:3rem">🚫</div>
+  <div style="color:#ef4444;font-size:1.5rem;font-weight:800;font-family:'Orbitron',monospace;letter-spacing:0.1em;">SCREENSHOT BLOCKED</div>
+  <div style="color:var(--text-secondary);font-size:0.82rem;">Incident logged.</div>
+</div>
+
+<div class="watermark-ac" id="watermark-ac"></div>
+
+<!-- Loading screen -->
+<div id="loading-screen" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;background:var(--galaxy-deep);z-index:200;">
+  <div class="spinner"></div>
+  <p style="color:var(--text-secondary);font-family:'Orbitron',monospace;font-size:0.85rem;letter-spacing:0.1em;">LOADING MISSION...</p>
+</div>
+
+<!-- Quiz in progress -->
+<div id="quiz-screen" class="hidden">
+  <div class="quiz-header">
+    <div class="quiz-header-left">
+      <button class="btn btn-ghost btn-sm" onclick="confirmExit()">✕ Exit</button>
+      <div>
+        <div id="quiz-title-header" style="font-family:'Orbitron',monospace;font-size:0.85rem;letter-spacing:0.08em;"></div>
+        <div class="q-progress" id="q-dots" style="margin-top:0.35rem;"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <span id="mode-badge" style="display:none;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;padding:0.25rem 0.75rem;border-radius:50px;"></span>
+      <span id="tab-warn" class="tab-counter">⚠ <span id="tab-num">0</span> switch(es)</span>
+      <span id="score-live" style="font-family:'Space Mono',monospace;font-size:0.8rem;color:var(--text-secondary);"></span>
+      <div class="timer-display" id="timer">00:00</div>
+    </div>
+  </div>
+  <div class="quiz-body">
+    <div class="question-num" id="q-num"></div>
+    <div class="question-card">
+      <div class="question-text" id="question-text" style="font-size:1.15rem;font-weight:600;line-height:1.6;margin-bottom:1.5rem;"></div>
+      <div class="answer-options" id="answer-opts"></div>
+      <div class="answer-feedback" id="answer-feedback"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="btn btn-cyan" id="next-btn" onclick="nextQuestion()" style="display:none;">Next Question →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Results screen -->
+<div id="result-screen" class="page hidden">
+  <nav class="nav">
+    <div class="nav-logo">PROJECT SOLOMON<span>MISSION COMPLETE</span></div>
+  </nav>
+  <div class="result-screen">
+    <div class="result-circle" id="result-circle"></div>
+    <div class="stars-display" id="result-stars"></div>
+    <h1 class="section-title" id="result-title" style="font-size:1.5rem;"></h1>
+    <p class="section-sub" id="result-sub"></p>
+    <div class="glass-card" style="margin:2rem 0;text-align:left;">
+      <div class="grid-3" style="margin-bottom:1.25rem;">
+        <div class="stat-card"><div class="stat-value" id="r-score" style="font-size:1.5rem;"></div><div class="stat-label">Score</div></div>
+        <div class="stat-card"><div class="stat-value" id="r-pct" style="font-size:1.5rem;color:var(--star-gold);"></div><div class="stat-label">Accuracy</div></div>
+        <div class="stat-card"><div class="stat-value" id="r-xp" style="font-size:1.5rem;color:var(--cosmic-green);"></div><div class="stat-label">XP Earned</div></div>
+      </div>
+      <div id="r-loot-notice" class="hidden" style="background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);border-radius:8px;padding:0.75rem;text-align:center;font-size:0.88rem;color:var(--star-gold);">
+        🎁 PERFECT SCORE! You earned a Loot Bag!
+      </div>
+      <div id="r-tabs" style="margin-top:0.75rem;display:none;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:0.6rem 1rem;font-size:0.82rem;color:#ff6666;"></div>
+    </div>
+    <div id="review-section"></div>
+    <div style="display:flex;gap:1rem;justify-content:center;margin-top:2rem;">
+      <a href="student.html" class="btn btn-cyan">Return to Base →</a>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+/* ════════ SETUP ════════ */
+const params    = new URLSearchParams(location.search);
+const quizId    = params.get('id');
+const isPreview = params.get('preview') === '1';
+const sess      = getSession();
+
+let student      = null;
+let quiz         = null;
+let currentQ     = 0;
+let score        = 0;
+let answers      = [];
+let answered     = false;
+let timerInterval;
+let secondsLeft;
+let tabCount     = 0;
+let quizStarted  = false;
+
+/* ════════ ANTI-CHEAT ════════ */
+// Block right-click
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// Block keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'PrintScreen' || (e.altKey && e.key === 'PrintScreen')) { e.preventDefault(); blackout(); }
+  if (e.shiftKey && e.metaKey && e.key.toLowerCase() === 's') { e.preventDefault(); blackout(); }
+  if (e.ctrlKey && 'cvuspa'.includes(e.key.toLowerCase())) e.preventDefault();
+  if (e.key === 'F12') e.preventDefault();
+  if (e.key === 'F5' && quizStarted) e.preventDefault();
+});
+
+// Block selection and copy
+document.addEventListener('selectstart', e => { if (quizStarted) e.preventDefault(); });
+document.addEventListener('copy',        e => { if (quizStarted) e.preventDefault(); });
+document.addEventListener('cut',         e => { if (quizStarted) e.preventDefault(); });
+document.addEventListener('dragstart',   e => { if (quizStarted) e.preventDefault(); });
+
+// Block screen recording
+if (navigator.mediaDevices?.getDisplayMedia) {
+  const _orig = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getDisplayMedia = function(c) {
+    if (quizStarted) { blackout(); return Promise.reject(new DOMException('Blocked','NotAllowedError')); }
+    return _orig(c);
+  };
+}
+
+// Tab switch detection
+document.addEventListener('visibilitychange', () => {
+  if (!quizStarted) return;
+  if (document.hidden) {
+    tabCount++;
+    updateTabWarning();
+    document.getElementById('ac-overlay').classList.remove('hidden');
+  }
+});
+window.addEventListener('blur', () => {
+  if (!quizStarted) return;
+  tabCount++;
+  updateTabWarning();
+  document.getElementById('ac-overlay').classList.remove('hidden');
+});
+
+function resumeQuiz() {
+  document.getElementById('ac-overlay').classList.add('hidden');
+}
+
+function updateTabWarning() {
+  const el = document.getElementById('tab-warn');
+  document.getElementById('tab-num').textContent = tabCount;
+  el.classList.add('visible');
+}
+
+// Screenshot blackout
+let _bko;
+function blackout() {
+  if (!quizStarted) return;
+  const el = document.getElementById('bko');
+  el.style.display = 'flex'; clearTimeout(_bko);
+  _bko = setTimeout(() => el.style.display = 'none', 2500);
+  tabCount++;
+}
+
+/* ════════ LOAD QUIZ FROM CLOUD ════════ */
+async function init() {
+  // Auth check
+  if (!isPreview && !sess) { window.location.href = 'index.html'; return; }
+
+  // Load student profile
+  if (!isPreview && sess?.role === 'student') {
+    student = await fetchStudent(sess.email);
+    if (!student) { showToast('Could not load your profile', 'error'); }
+    else {
+      // Set watermark
+      document.getElementById('watermark-ac').textContent =
+        `${student.name} · ${student.email} · PROJECT SOLOMON`;
+    }
+  }
+
+  // Load quiz — try Sheets first (works on any device), fallback to local
+  quiz = await loadQuizById(quizId);
+
+  if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+    // Debug: show what we got
+    const debugInfo = quiz ? `Quiz found: "${quiz.title}" but questions=${JSON.stringify(quiz.questions).substring(0,100)}` : 'Quiz not found in Sheets or localStorage';
+    document.getElementById('loading-screen').innerHTML = `
+      <div style="text-align:center;padding:2rem;max-width:600px;margin:0 auto;">
+        <div style="font-size:3rem;margin-bottom:1rem;">😞</div>
+        <h2 style="font-family:'Orbitron',monospace;font-size:1rem;color:var(--cosmic-magenta);">QUESTIONS NOT LOADED</h2>
+        <p style="color:var(--text-secondary);margin:1rem 0;">The quiz was found but questions are missing from Google Sheets.</p>
+        <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:0.75rem;font-family:monospace;font-size:0.72rem;color:#0f0;text-align:left;margin:1rem 0;word-break:break-all;">${debugInfo}</div>
+        <p style="color:var(--text-muted);font-size:0.82rem;">Ask your teacher to go to Quiz Portal → ☁ Sync to Sheets</p>
+        <a href="student.html" class="btn btn-ghost btn-sm" style="margin-top:1rem;">← Return to Base</a>
+      </div>`;
+    return;
+  }
+
+  // Hide loader, show quiz
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('quiz-screen').classList.remove('hidden');
+  document.getElementById('quiz-title-header').textContent = quiz.title;
+  secondsLeft = (parseInt(quiz.time) || 15) * 60;
+  // Show mode badge in HUD
+  const modeBadge = document.getElementById('mode-badge');
+  const isAssessmentMode = (quiz.category || 'practice') === 'assessment';
+  modeBadge.style.display = 'inline-block';
+  if (isAssessmentMode) {
+    modeBadge.textContent = '📝 ASSESSMENT';
+    modeBadge.style.cssText += ';background:rgba(255,45,155,0.15);color:var(--cosmic-magenta);border:1px solid rgba(255,45,155,0.3);display:inline-block;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;padding:0.25rem 0.75rem;border-radius:50px;';
+  } else {
+    modeBadge.textContent = '🎯 PRACTICE';
+    modeBadge.style.cssText += ';background:rgba(0,212,255,0.12);color:var(--cosmic-cyan);border:1px solid rgba(0,212,255,0.3);display:inline-block;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;padding:0.25rem 0.75rem;border-radius:50px;';
+  }
+  renderDots();
+  renderQuestion();
+  quizStarted = true; // set AFTER render so tab detection doesn't fire during loading
+  startTimer();
+}
+
+/* ════════ LOAD QUIZ BY ID ════════ */
+function parseQuizData(q) {
+  if (!q) return null;
+  // Parse questions from JSON string if needed
+  if (typeof q.questions === 'string') {
+    try { q.questions = JSON.parse(q.questions); } catch { q.questions = []; }
+  }
+  if (!Array.isArray(q.questions)) q.questions = [];
+  // Parse sections
+  if (typeof q.sections === 'string') {
+    q.sections = q.sections.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  // Ensure time is a valid number (default 15 min)
+  q.time = parseInt(q.time) || 15;
+  // Ensure category is set
+  q.category = q.category || 'practice';
+  return q;
+}
+
+async function loadQuizById(id) {
+  // 1. Try local first (fast, works for teacher preview on same device)
+  const local = getQuiz(id);
+  if (local && local.questions && local.questions.length > 0) return parseQuizData(local);
+
+  // 2. Fetch directly by ID from Sheets
+  const result = await sheetsGet('getQuizById', { id: String(id) });
+  if (result.ok && result.quiz) {
+    const q = parseQuizData(result.quiz);
+    if (q && q.questions.length > 0) return q;
+  }
+
+  // 3. Fallback: fetch all quizzes for student section and find matching id
+  const section = student?.section || '';
+  const quizzes = await fetchQuizzesForStudent(section);
+  const found = quizzes.find(q => String(q.id) === String(id));
+  return found ? parseQuizData(found) : null;
+}
+
+/* ════════ DOTS ════════ */
+function renderDots() {
+  document.getElementById('q-dots').innerHTML = quiz.questions.map((_,i) =>
+    `<div class="q-dot ${i < currentQ ? 'done' : i === currentQ ? 'current' : ''}" id="dot-${i}"></div>`
+  ).join('');
+}
+
+/* ════════ TIMER ════════ */
+function startTimer() {
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    secondsLeft--;
+    updateTimerDisplay();
+    if (secondsLeft <= 0) { clearInterval(timerInterval); showToast("Time's up!", 'error'); setTimeout(finishQuiz, 800); }
+  }, 1000);
+}
+function updateTimerDisplay() {
+  const m = Math.floor(secondsLeft / 60), s = secondsLeft % 60;
+  const el = document.getElementById('timer');
+  el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  el.className = `timer-display ${secondsLeft <= 30 ? 'danger' : secondsLeft <= 60 ? 'warn' : ''}`;
+}
+
+/* ════════ RENDER QUESTION ════════ */
+function renderQuestion() {
+  const q = quiz.questions[currentQ];
+  answered = false;
+  document.getElementById('q-num').textContent = `QUESTION ${currentQ+1} OF ${quiz.questions.length}`;
+  document.getElementById('question-text').textContent = q.question;
+  document.getElementById('score-live').textContent = `${score}/${currentQ}`;
+  document.getElementById('next-btn').style.display = 'none';
+  const fb = document.getElementById('answer-feedback');
+  fb.style.display = 'none'; fb.textContent = '';
+
+  document.getElementById('answer-opts').innerHTML = q.options.map((opt, i) =>
+    `<button class="answer-opt" onclick="selectAnswer(${i})">${String.fromCharCode(65+i)}) ${opt}</button>`
+  ).join('');
+  renderDots();
+}
+
+/* ════════ ANSWER ════════ */
+function selectAnswer(i) {
+  if (answered) return;
+  answered = true;
+  const q = quiz.questions[currentQ];
+  const isAssessment = (quiz.category || 'practice') === 'assessment';
+  const opts = document.querySelectorAll('.answer-opt');
+  const isCorrect = i === q.correct;
+
+  if (isAssessment) {
+    // ── ASSESSMENT MODE: hide right/wrong, just mark selected ──
+    opts[i].style.borderColor = 'var(--cosmic-magenta)';
+    opts[i].style.background  = 'rgba(255,45,155,0.12)';
+    opts[i].style.color       = 'var(--text-primary)';
+    opts.forEach(o => o.disabled = true);
+    const fb = document.getElementById('answer-feedback');
+    fb.style.cssText = 'display:block;padding:0.6rem 1rem;border-radius:8px;font-size:0.82rem;background:rgba(255,45,155,0.06);border-left:3px solid var(--cosmic-magenta);color:var(--cosmic-magenta);';
+    fb.textContent = '✓ Answer recorded. Move to next question.';
+  } else {
+    // ── PRACTICE MODE: show correct/wrong immediately ──
+    opts[i].classList.add(isCorrect ? 'correct' : 'wrong');
+    opts[q.correct].classList.add('correct');
+    opts.forEach(o => o.disabled = true);
+    const fb = document.getElementById('answer-feedback');
+    fb.style.display = 'block';
+    if (isCorrect) {
+      fb.style.cssText = 'display:block;padding:0.75rem 1rem;border-radius:8px;font-size:0.88rem;background:rgba(0,255,136,0.08);border-left:3px solid var(--cosmic-green);color:var(--cosmic-green);';
+      fb.textContent = '✓ Correct! Well done!';
+      const xpEl = document.createElement('div');
+      xpEl.className = 'xp-flash'; xpEl.textContent = '+XP';
+      document.body.appendChild(xpEl);
+      setTimeout(() => xpEl.remove(), 1200);
+    } else {
+      fb.style.cssText = 'display:block;padding:0.75rem 1rem;border-radius:8px;font-size:0.88rem;background:rgba(255,68,68,0.08);border-left:3px solid #ff4444;color:#ff6666;';
+      fb.textContent = `✗ Incorrect. Correct answer: ${String.fromCharCode(65+q.correct)}) ${q.options[q.correct]}`;
+    }
+  }
+
+  if (isCorrect) score++;
+  answers.push({ question: q.question, selected: i, correct: q.correct, isCorrect });
+  document.getElementById('dot-'+currentQ).classList.add('done');
+  const nextBtn = document.getElementById('next-btn');
+  nextBtn.textContent = currentQ >= quiz.questions.length - 1 ? '🏁 Finish Mission' : 'Next Question →';
+  nextBtn.style.display = 'block';
+}
+
+function nextQuestion() {
+  if (!answered) { showToast('Please select an answer first!', 'error'); return; }
+  currentQ++;
+  if (currentQ >= quiz.questions.length) { finishQuiz(); return; }
+  renderQuestion();
+}
+
+/* ════════ FINISH ════════ */
+async function finishQuiz() {
+  clearInterval(timerInterval);
+  quizStarted = false;
+
+  const total  = quiz.questions.length;
+  const pct    = Math.round(score / total * 100);
+  const xp     = Math.round((score / total) * 50);
+  const isPerfect = score === total;
+  const elapsed   = (quiz.time || 15) * 60 - secondsLeft;
+
+  // Save score to Sheets (works cross-device)
+  if (!isPreview && student) {
+    await saveScore({
+      email:      student.email,
+      name:       student.name,
+      section:    student.section,
+      quizId:     quiz.id,
+      quizTitle:  quiz.title,
+      category:   quiz.category || 'practice',
+      score, total, xp,
+      tabSwitches: tabCount,
+      timeTaken:  `${Math.floor(elapsed/60)}m ${elapsed%60}s`,
+      createdAt:  new Date().toISOString()
+    });
+  }
+
+  // Show result screen
+  document.getElementById('quiz-screen').classList.add('hidden');
+  document.getElementById('result-screen').classList.remove('hidden');
+
+  const col = pct>=90?'var(--cosmic-green)':pct>=75?'var(--cosmic-cyan)':pct>=50?'var(--star-gold)':'#ff4444';
+  const circle = document.getElementById('result-circle');
+  circle.style.cssText = `background:${col}22;border:3px solid ${col};color:${col};width:140px;height:140px;border-radius:50%;margin:0 auto 1.5rem;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:2rem;font-weight:700;`;
+  circle.textContent = `${pct}%`;
+
+  document.getElementById('result-stars').textContent = pct===100?'⭐⭐⭐':pct>=75?'⭐⭐':pct>=50?'⭐':'';
+  const titleMap = [[90,'🌌 Galaxy Sovereign!'],[75,'🚀 Mission Success!'],[50,'✅ Quest Complete'],[0,'💪 Keep Training']];
+  document.getElementById('result-title').textContent = titleMap.find(([t])=>pct>=t)[1];
+  document.getElementById('result-sub').textContent = isPerfect
+    ? '🎁 PERFECT SCORE! You earned a Loot Bag!' : `You answered ${score} of ${total} correctly.`;
+  document.getElementById('r-score').textContent = `${score}/${total}`;
+  document.getElementById('r-pct').textContent   = `${pct}%`;
+  document.getElementById('r-xp').textContent    = `+${xp}`;
+  if (isPerfect) document.getElementById('r-loot-notice').classList.remove('hidden');
+  if (tabCount > 0) {
+    const tabEl = document.getElementById('r-tabs');
+    tabEl.style.display = 'block';
+    tabEl.textContent = `⚠ ${tabCount} tab switch(es) detected — logged to teacher.`;
+  }
+
+  const isAssessment = (quiz.category || 'practice') === 'assessment';
+
+  // Question review — only shown for Practice mode
+  if (isAssessment) {
+    document.getElementById('review-section').innerHTML = `
+      <div style="text-align:center;padding:2rem;background:rgba(255,45,155,0.06);border:1px solid rgba(255,45,155,0.2);border-radius:12px;margin-top:1rem;">
+        <div style="font-size:2rem;margin-bottom:0.75rem;">📝</div>
+        <p style="font-weight:600;color:var(--cosmic-magenta);margin-bottom:0.4rem;">Assessment Mode</p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">Individual answers and correct answers are not shown in assessment mode.<br>Your teacher will review your results.</p>
+      </div>`;
+    // Also hide individual score, show only final percentage
+    document.getElementById('r-score').closest('.stat-card').style.display = 'none';
+  } else {
+    document.getElementById('review-section').innerHTML = `
+      <h3 style="font-family:'Orbitron',monospace;font-size:0.82rem;letter-spacing:0.1em;color:var(--text-secondary);margin-bottom:1rem;">📋 QUESTION REVIEW</h3>
+      ${answers.map((a,i) => `
+        <div style="background:${a.isCorrect?'rgba(0,255,136,0.06)':'rgba(255,68,68,0.06)'};border:1px solid ${a.isCorrect?'rgba(0,255,136,0.2)':'rgba(255,68,68,0.2)'};border-radius:8px;padding:0.9rem;margin-bottom:0.5rem;text-align:left;">
+          <p style="font-size:0.82rem;font-weight:500;">${i+1}. ${a.question}</p>
+          <p style="font-size:0.78rem;margin-top:0.4rem;color:${a.isCorrect?'var(--cosmic-green)':'#ff6666'};">
+            ${a.isCorrect?'✓':'✗'} ${String.fromCharCode(65+a.selected)}) ${quiz.questions[i].options[a.selected]}
+            ${!a.isCorrect?` → Correct: ${String.fromCharCode(65+a.correct)}) ${quiz.questions[i].options[a.correct]}`:''}
+          </p>
+        </div>`).join('')}`;
+  }
+}
+
+function confirmExit() {
+  if (confirm('Exit quiz? Your progress will be lost.')) {
+    clearInterval(timerInterval);
+    window.location.href = isPreview ? 'teacher.html' : 'student.html';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
