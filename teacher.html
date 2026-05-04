@@ -276,22 +276,35 @@
         <div class="section-header">
           <div>
             <h1 class="section-title">🗺️ Deploy Adventure</h1>
-            <p class="section-sub">Upload a PDF lesson — auto-converted into a gamified adventure!</p>
+            <p class="section-sub">Upload your HTML lesson — instantly converted to a gamified adventure!</p>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="showTab('deploy')">← Back</button>
         </div>
 
         <div class="glass-card" style="max-width:680px;">
-          <div style="background:rgba(0,170,255,0.08);border:2px solid rgba(0,170,255,0.25);border-radius:14px;padding:1rem;margin-bottom:1.5rem;font-size:0.82rem;color:var(--finn-blue);font-weight:700;line-height:1.6;">
-            📖 <strong>How it works:</strong> Upload your lesson as a PDF. The AI wizard will automatically break it into game-like sections, learning checkpoints, and interactive quizzes — ready for students in the Adventure Zone!
+          <div style="background:rgba(0,170,255,.08);border:2px solid rgba(0,170,255,.25);border-radius:14px;padding:1rem;margin-bottom:1.5rem;font-size:.82rem;color:#00aaff;font-weight:700;line-height:1.7;">
+            🗺️ <strong>How it works:</strong> Export your lesson as HTML (from PowerPoint, Google Slides, or write it directly). Upload it here — the system instantly parses the content and wraps it in the Adventure Time lesson experience. <strong style="color:#ffd700;">No AI, no API key, works instantly and free!</strong>
           </div>
+
+          <div style="background:rgba(255,215,0,.06);border:2px solid rgba(255,215,0,.2);border-radius:12px;padding:1rem;margin-bottom:1.5rem;">
+            <div style="font-family:'Fredoka One',cursive;font-size:.82rem;color:#ffd700;margin-bottom:.5rem;">📋 HOW TO PREPARE YOUR HTML LESSON</div>
+            <div style="font-size:.78rem;color:#c9b8e8;font-weight:700;line-height:1.8;">
+              Use <strong style="color:#fffde7;">&lt;h1&gt;</strong> or <strong style="color:#fffde7;">&lt;h2&gt;</strong> tags for section titles<br>
+              Use <strong style="color:#fffde7;">&lt;p&gt;</strong> tags for lesson content/explanations<br>
+              Use <strong style="color:#fffde7;">&lt;ul&gt;&lt;li&gt;</strong> for bullet point lists<br>
+              Add <strong style="color:#fffde7;">&lt;!-- CHECKPOINT --&gt;</strong> comments where you want quiz breaks<br>
+              After each checkpoint comment, add questions as <strong style="color:#fffde7;">&lt;!-- Q: question | A: answer1 | A: answer2* | A: answer3 --&gt;</strong> (star = correct)<br>
+              <span style="color:#ffd700;">Tip: Save any webpage as HTML and upload it!</span>
+            </div>
+          </div>
+
           <div class="form-group">
             <label class="form-label">Lesson Title</label>
-            <input type="text" id="adv-title" class="form-control" placeholder="e.g. Chapter 3: The Water Cycle" />
+            <input type="text" id="adv-title" class="form-control" placeholder="e.g. Introduction to Thermochemistry" />
           </div>
           <div class="form-group">
             <label class="form-label">Subject / Topic</label>
-            <input type="text" id="adv-subject" class="form-control" placeholder="e.g. Science — Earth Systems" />
+            <input type="text" id="adv-subject" class="form-control" placeholder="e.g. Science — General Chemistry 2" />
           </div>
           <div class="form-group">
             <label class="form-label">Allowed Sections</label>
@@ -304,34 +317,26 @@
             </select>
           </div>
 
-          <label class="form-label">PDF Lesson File</label>
-          <div class="upload-zone" id="pdf-upload-zone" onclick="document.getElementById('pdf-input').click()">
+          <label class="form-label">HTML Lesson File</label>
+          <div class="upload-zone" id="adv-upload-zone" onclick="document.getElementById('adv-html-input').click()">
             <div class="upload-icon">📄</div>
-            <p><strong>Click or drag & drop</strong> your PDF lesson here</p>
-            <p style="margin-top:0.5rem;font-size:0.78rem;">Supports: .pdf files — Wizard AI will gamify them automatically!</p>
+            <p><strong>Click or drag & drop</strong> your HTML lesson file here</p>
+            <p style="margin-top:.5rem;font-size:.78rem;">Supports: .html, .htm files — instantly converted to Adventure format!</p>
           </div>
-          <input type="file" id="pdf-input" accept=".pdf" class="hidden" onchange="handlePDFUpload(this)" />
+          <input type="file" id="adv-html-input" accept=".html,.htm" class="hidden" onchange="handleAdvHTMLUpload(this)" />
 
-          <div id="pdf-preview" class="hidden" style="margin-top:1.25rem;">
+          <div id="adv-preview" class="hidden" style="margin-top:1.25rem;">
             <div class="upload-preview">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
-                <h4 style="font-family:'Fredoka One',cursive;font-size:.9rem;color:#fffde7;">📡 PDF READY</h4>
-                <span id="pdf-filename" class="badge badge-cyan"></span>
+                <h4 style="font-family:'Fredoka One',cursive;font-size:.9rem;color:#fffde7;">📡 LESSON PARSED</h4>
+                <span id="adv-filename" class="badge badge-cyan"></span>
               </div>
-              <p style="font-size:.85rem;color:#c9b8e8;font-weight:700;line-height:1.65;">The <strong style="color:#00aaff;">Wizard AI</strong> will read this PDF and auto-generate a fully interactive adventure — characters, explanations, and checkpoint quizzes — all based on your specific lesson content!</p>
-              <div style="margin-top:.75rem;padding:.7rem 1rem;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.25);border-radius:10px;font-size:.78rem;color:#ffd700;font-weight:700;">⏱ Generation takes ~30–60 seconds. Each PDF gets a unique adventure!</div>
+              <div id="adv-parse-summary"></div>
             </div>
-            <div id="ai-gen-status" class="hidden" style="text-align:center;padding:1.5rem;background:rgba(0,170,255,.06);border:2px solid rgba(0,170,255,.2);border-radius:14px;margin-top:1rem;">
-              <div style="font-size:2rem;margin-bottom:.5rem;">🧙</div>
-              <div style="font-family:'Fredoka One',cursive;font-size:1rem;color:#00aaff;margin-bottom:.35rem;" id="ai-gen-title">Wizard AI is reading your lesson...</div>
-              <div style="font-size:.8rem;color:#c9b8e8;font-weight:700;" id="ai-gen-msg">Analyzing content and building adventure scenes...</div>
-              <div style="margin-top:1rem;height:6px;background:rgba(0,0,0,.3);border-radius:6px;overflow:hidden;max-width:300px;margin-left:auto;margin-right:auto;">
-                <div id="ai-gen-bar" style="height:100%;background:linear-gradient(90deg,#00aaff,#00d4aa);border-radius:6px;width:0%;transition:width 2s ease;"></div>
-              </div>
-            </div>
+            <div id="adv-scenes-preview" style="max-height:300px;overflow-y:auto;margin-top:.75rem;"></div>
             <div style="display:flex;gap:1rem;margin-top:1.25rem;">
-              <button class="btn btn-cyan" style="flex:1;" id="deploy-adv-btn" onclick="deployAdventure()">🤖 Generate AI Adventure!</button>
-              <button class="btn btn-ghost" onclick="clearPDF()">✕ Clear</button>
+              <button class="btn btn-cyan" style="flex:1;" id="deploy-adv-btn" onclick="deployAdventure()">🗺️ Deploy Adventure!</button>
+              <button class="btn btn-ghost" onclick="clearAdvHTML()">✕ Clear</button>
             </div>
           </div>
         </div>
@@ -1079,125 +1084,428 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
     /* ══ ADVENTURE DEPLOY (PDF) ══ */
     let adventurePDF = null;
 
-    function handlePDFUpload(input) {
+    /* ══ ADVENTURE HTML PARSER ══ */
+    let adventureHTML = null;
+    let parsedLessonData = null;
+
+    function handleAdvHTMLUpload(input) {
       const file = input.files[0];
       if (!file) return;
-      adventurePDF = file;
-      document.getElementById('pdf-filename').textContent = file.name;
-      document.getElementById('pdf-preview').classList.remove('hidden');
-      showToast(`PDF loaded: ${file.name} 📄`, 'success');
+      adventureHTML = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        parsedLessonData = parseHTMLLesson(e.target.result, file.name);
+        document.getElementById('adv-filename').textContent = file.name;
+        showAdvPreview(parsedLessonData);
+        document.getElementById('adv-preview').classList.remove('hidden');
+        showToast(`✅ Parsed ${parsedLessonData.scenes.length} scenes from your lesson!`, 'success');
+      };
+      reader.readAsText(file);
     }
 
-    const pdfZone = document.getElementById('pdf-upload-zone');
-    if (pdfZone) {
-      pdfZone.addEventListener('dragover', e=>{e.preventDefault();pdfZone.classList.add('drag-over');});
-      pdfZone.addEventListener('dragleave',()=>pdfZone.classList.remove('drag-over'));
-      pdfZone.addEventListener('drop',e=>{e.preventDefault();pdfZone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f){const inp=document.getElementById('pdf-input');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;handlePDFUpload(inp);}});
+    // Drag-and-drop for adventure upload
+    const advZone = document.getElementById('adv-upload-zone');
+    if (advZone) {
+      advZone.addEventListener('dragover', e=>{e.preventDefault();advZone.classList.add('drag-over');});
+      advZone.addEventListener('dragleave', ()=>advZone.classList.remove('drag-over'));
+      advZone.addEventListener('drop', e=>{
+        e.preventDefault();advZone.classList.remove('drag-over');
+        const f=e.dataTransfer.files[0];
+        if(f){const inp=document.getElementById('adv-html-input');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;handleAdvHTMLUpload(inp);}
+      });
     }
 
-    async function deployAdventure() {
-      const title = document.getElementById('adv-title').value.trim();
-      const subject = document.getElementById('adv-subject').value.trim();
-      if (!title) { showToast('Enter a lesson title!', 'error'); return; }
-      if (!adventurePDF) { showToast('Upload a PDF lesson!', 'error'); return; }
+    function parseHTMLLesson(htmlText, filename) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+      const scenes = [];
+      let chapterCount = 0;
+      let cpCount = 0;
+      const CHARS = ['jake', 'bmo', 'finn', 'jake', 'bmo', 'finn'];
+      let charIdx = 0;
 
-      // Show AI generation status
-      const genStatus = document.getElementById('ai-gen-status');
-      const deployBtn = document.getElementById('deploy-adv-btn');
-      genStatus.classList.remove('hidden');
-      deployBtn.disabled = true;
-      deployBtn.textContent = '🧙 Generating...';
+      // Try to get title from <title> or first h1
+      const docTitle = doc.querySelector('title')?.textContent?.trim() ||
+                       doc.querySelector('h1')?.textContent?.trim() || filename.replace(/\.html?$/i,'');
+      const subject = doc.querySelector('meta[name="subject"]')?.content || '';
 
-      const steps = [
-        [10, '🧙 Reading your PDF lesson...'],
-        [25, '📖 Extracting key concepts...'],
-        [45, '🗺️ Building adventure scenes...'],
-        [65, '🎭 Writing character dialogues...'],
-        [80, '🧩 Creating checkpoint quizzes...'],
-        [95, '✨ Finalizing your adventure...'],
-      ];
-      let stepIdx = 0;
-      const barInterval = setInterval(() => {
-        if (stepIdx < steps.length) {
-          const [pct, msg] = steps[stepIdx++];
-          document.getElementById('ai-gen-bar').style.width = pct + '%';
-          document.getElementById('ai-gen-msg').textContent = msg;
+      // Walk through the document body
+      const body = doc.body || doc.documentElement;
+
+      // Parse via comment-based checkpoints first
+      const rawHTML = htmlText;
+      const checkpointSections = rawHTML.split(/<!--\s*CHECKPOINT\s*-->/i);
+
+      checkpointSections.forEach((section, secIdx) => {
+        // Parse the HTML chunk
+        const tmp = document.createElement('div');
+        tmp.innerHTML = section;
+
+        // Find all headings and paragraphs
+        const nodes = tmp.querySelectorAll('h1,h2,h3,h4,p,ul,ol,table,blockquote');
+
+        let pendingContent = [];
+        let pendingTitle = '';
+
+        nodes.forEach(node => {
+          const tag = node.tagName.toLowerCase();
+          const text = node.textContent.trim();
+          if (!text) return;
+
+          if (tag === 'h1' || tag === 'h2') {
+            // Flush pending content
+            if (pendingContent.length > 0 || pendingTitle) {
+              flushContent(scenes, pendingTitle, pendingContent, chapterCount, CHARS, charIdx);
+              charIdx = (charIdx + 1) % CHARS.length;
+              pendingContent = [];
+              pendingTitle = '';
+            }
+            // New chapter
+            chapterCount++;
+            scenes.push({
+              type: 'chapter',
+              icon: getIcon(text),
+              chapterNum: chapterCount,
+              title: text,
+              subtitle: 'Continue your journey through the Land of Wit!'
+            });
+            pendingTitle = text;
+
+          } else if (tag === 'h3' || tag === 'h4') {
+            if (pendingContent.length > 0) {
+              flushContent(scenes, pendingTitle, pendingContent, chapterCount, CHARS, charIdx);
+              charIdx = (charIdx + 1) % CHARS.length;
+              pendingContent = [];
+            }
+            pendingTitle = text;
+
+          } else if (tag === 'p') {
+            if (text.length > 20) pendingContent.push({ type: 'p', text });
+
+          } else if (tag === 'ul' || tag === 'ol') {
+            const items = [...node.querySelectorAll('li')].map(li => li.textContent.trim()).filter(Boolean);
+            if (items.length) pendingContent.push({ type: 'list', items });
+
+          } else if (tag === 'blockquote') {
+            pendingContent.push({ type: 'quote', text });
+
+          } else if (tag === 'table') {
+            // Convert table to two_col if 2 columns
+            const rows = [...node.querySelectorAll('tr')];
+            const headers = [...(rows[0]?.querySelectorAll('th,td') || [])].map(c=>c.textContent.trim());
+            if (headers.length >= 2) {
+              const leftItems = [], rightItems = [];
+              rows.slice(1).forEach(row => {
+                const cells = [...row.querySelectorAll('td')].map(c=>c.textContent.trim());
+                if (cells[0]) leftItems.push(cells[0]);
+                if (cells[1]) rightItems.push(cells[1]);
+              });
+              if (leftItems.length && rightItems.length) {
+                scenes.push({
+                  type: 'two_col',
+                  leftTitle: headers[0] || 'Left',
+                  leftColor: 'blue',
+                  leftItems,
+                  leftFormula: '',
+                  rightTitle: headers[1] || 'Right',
+                  rightColor: 'purple',
+                  rightItems,
+                  rightFormula: ''
+                });
+              }
+            }
+          }
+        });
+
+        // Flush remaining content
+        if (pendingContent.length > 0 || pendingTitle) {
+          flushContent(scenes, pendingTitle, pendingContent, chapterCount, CHARS, charIdx);
+          charIdx = (charIdx + 1) % CHARS.length;
         }
-      }, 5000);
 
-      try {
-        // Read PDF as base64
-        const base64 = await new Promise((res, rej) => {
-          const reader = new FileReader();
-          reader.onload = () => res(reader.result.split(',')[1]);
-          reader.onerror = rej;
-          reader.readAsDataURL(adventurePDF);
-        });
-
-        document.getElementById('ai-gen-title').textContent = 'AI Wizard is reading your lesson...';
-
-        // Call Claude API to generate adventure lesson
-        // Call Claude via Google Apps Script proxy (free, no CORS issues!)
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error('Google Sheets API not configured. Check Setup.');
-
-        const response = await sheetsGet('generateAdventure', {
-          pdfBase64: base64,
-          title: title,
-          subject: subject
-        });
-
-        clearInterval(barInterval);
-        document.getElementById('ai-gen-bar').style.width = '98%';
-        document.getElementById('ai-gen-msg').textContent = '💾 Saving your adventure...';
-        document.getElementById('ai-gen-title').textContent = 'Almost done!';
-
-        if (!response.ok) throw new Error(response.error || 'AI generation failed');
-
-        const lessonData = response.lessonData;
-        if (!lessonData) throw new Error('No lesson data returned from AI');
-
-        // Save as adventure quiz with AI-generated content embedded
-        const sections = [...document.getElementById('adv-sections').selectedOptions].map(o=>o.value);
-        const quizRecord = saveQuiz({
-          title, subject, time: 30, sections,
-          category: 'adventure',
-          questions: [{ question: 'AI_GENERATED_LESSON', options: ['Start'], correct: 0 }],
-          locked: false,
-          lessonType: 'pdf_ai',
-          lessonData: JSON.stringify(lessonData)
-        });
-
-        // Also save lesson data to localStorage keyed by quiz id for student access
-        const quizzes = JSON.parse(localStorage.getItem('s_quizzes')||'[]');
-        const saved = quizzes[quizzes.length-1];
-        if (saved) {
-          localStorage.setItem('adventure_lesson_' + saved.id, JSON.stringify(lessonData));
-        }
-
-        document.getElementById('ai-gen-bar').style.width = '100%';
-        showToast(`🗺️ Adventure "${title}" generated and deployed! Excellence is a Habit! 🌟`, 'success');
+        // Parse checkpoint questions from comments after the section
+        const cpMatches = [...rawHTML.matchAll(/<!--\s*Q:\s*([^|]+)\|([^>]+)-->/gi)];
+        const sectionStart = secIdx > 0 ? rawHTML.indexOf('<!-- CHECKPOINT', rawHTML.indexOf('<!-- CHECKPOINT') + 1) : 0;
         
-        setTimeout(() => {
-          genStatus.classList.add('hidden');
-          deployBtn.disabled = false;
-          deployBtn.textContent = '🤖 Generate AI Adventure!';
-          clearPDF();
-          document.getElementById('adv-title').value = '';
-          document.getElementById('adv-subject').value = '';
-        }, 2000);
+        // Extract questions from <!-- Q: ... --> comments in this section
+        const sectionQuestions = [];
+        const qPattern = /<!--\s*Q:\s*([^|]+)\|([^>]+?)-->/gi;
+        let qMatch;
+        // Look for questions in this section's text
+        const sectionForQ = secIdx < checkpointSections.length - 1 ? checkpointSections[secIdx + 1] : '';
+        const qScan = '<!-- CHECKPOINT -->' + sectionForQ;
+        
+        while ((qMatch = qPattern.exec(qScan)) !== null) {
+          const qText = qMatch[1].trim();
+          const answerPart = qMatch[2];
+          const answers = answerPart.split('|A:').map(a => a.replace(/^A:/,'').trim());
+          const correctIdx = answers.findIndex(a => a.endsWith('*'));
+          const options = answers.map(a => a.replace(/\*$/,'').trim()).filter(Boolean);
+          if (qText && options.length >= 2) {
+            sectionQuestions.push({
+              q: qText,
+              options,
+              correct: Math.max(0, correctIdx),
+              feedback_right: '✓ Correct! Excellence is a Habit!',
+              feedback_wrong: `The correct answer is: ${options[Math.max(0,correctIdx)]}`
+            });
+          }
+        }
 
-      } catch (err) {
-        clearInterval(barInterval);
-        genStatus.classList.add('hidden');
-        deployBtn.disabled = false;
-        deployBtn.textContent = '🤖 Generate AI Adventure!';
-        showToast('Error: ' + err.message, 'error');
-        console.error(err);
+        // If this is NOT the last section and there are questions or we have enough content, add checkpoint
+        if (secIdx < checkpointSections.length - 1 && scenes.length > 1) {
+          cpCount++;
+          const cpQuestions = sectionQuestions.length > 0 ? sectionQuestions : generateAutoQuestions(scenes, cpCount);
+          scenes.push({
+            type: 'checkpoint',
+            cpNum: cpCount,
+            title: `Checkpoint ${cpCount} — Knowledge Check!`,
+            questions: cpQuestions
+          });
+        }
+      });
+
+      // If no checkpoints were found, auto-insert one in the middle
+      if (cpCount === 0 && scenes.length > 3) {
+        const midpoint = Math.floor(scenes.length / 2);
+        const autoCP = {
+          type: 'checkpoint',
+          cpNum: 1,
+          title: 'Knowledge Check!',
+          questions: generateAutoQuestions(scenes, 1)
+        };
+        scenes.splice(midpoint, 0, autoCP);
       }
+
+      // Add a final checkpoint if none after last content
+      if (scenes.length > 0 && scenes[scenes.length-1].type !== 'checkpoint' && cpCount === 0) {
+        cpCount++;
+        scenes.push({
+          type: 'checkpoint',
+          cpNum: cpCount,
+          title: 'Final Check — Prove Your Mastery!',
+          questions: generateAutoQuestions(scenes, cpCount)
+        });
+      }
+
+      return { title: docTitle, subject: subject, scenes };
     }
 
-    function clearPDF() { adventurePDF = null; document.getElementById('pdf-preview').classList.add('hidden'); document.getElementById('pdf-input').value = ''; }
+    function flushContent(scenes, title, contentBlocks, chapterCount, CHARS, charIdx) {
+      if (!contentBlocks.length) return;
+      
+      // First paragraph → dialogue from a character
+      const firstPara = contentBlocks.find(b => b.type === 'p');
+      if (firstPara && firstPara.text.length > 30) {
+        const char = CHARS[charIdx % CHARS.length];
+        scenes.push({
+          type: 'dialogue',
+          character: char,
+          text: firstPara.text.substring(0, 300) + (firstPara.text.length > 300 ? '...' : '')
+        });
+      }
+
+      // Lists → content card with bullet points
+      const lists = contentBlocks.filter(b => b.type === 'list');
+      const paras = contentBlocks.filter((b,i) => b.type === 'p' && i > 0);
+
+      if (lists.length > 0) {
+        lists.forEach(list => {
+          scenes.push({
+            type: 'content',
+            title: title ? '📋 ' + title : '📋 Key Points',
+            body: list.items.map((item,i)=>`<strong>${String.fromCharCode(9679)}</strong> ${item}`).join('<br>'),
+            formula: ''
+          });
+        });
+      }
+
+      // Remaining paras → content cards
+      paras.forEach((para, i) => {
+        if (i === 0 && !lists.length) return; // skip, already used as dialogue
+        scenes.push({
+          type: 'content',
+          title: i === 0 ? (title ? '🔬 ' + title : '🔬 Learn More') : '💡 More Details',
+          body: para.text,
+          formula: ''
+        });
+      });
+
+      // Blockquotes → highlight boxes
+      const quotes = contentBlocks.filter(b => b.type === 'quote');
+      quotes.forEach(q => {
+        scenes.push({
+          type: 'highlight',
+          style: 'gold',
+          icon: '💡',
+          label: 'Key Insight',
+          body: q.text
+        });
+      });
+    }
+
+    function getIcon(text) {
+      const t = text.toLowerCase();
+      if (t.includes('intro') || t.includes('what')) return '📖';
+      if (t.includes('learn') || t.includes('objective') || t.includes('outcome')) return '🎯';
+      if (t.includes('concept') || t.includes('defin') || t.includes('term')) return '🔬';
+      if (t.includes('example') || t.includes('practice') || t.includes('apply')) return '✏️';
+      if (t.includes('summary') || t.includes('review') || t.includes('recap')) return '📋';
+      if (t.includes('energy') || t.includes('thermo') || t.includes('heat')) return '🔥';
+      if (t.includes('cell') || t.includes('bio') || t.includes('life')) return '🧬';
+      if (t.includes('math') || t.includes('equat') || t.includes('calculat')) return '🧮';
+      if (t.includes('history') || t.includes('time') || t.includes('war')) return '⏳';
+      if (t.includes('country') || t.includes('map') || t.includes('geograph')) return '🌍';
+      return ['⚡','🌟','🔬','📊','🎯','💡','🚀','🌿'][Math.floor(Math.random()*8)];
+    }
+
+    function generateAutoQuestions(scenes, cpNum) {
+      // Extract key terms from content scenes to build auto questions
+      const contentScenes = scenes.filter(s => s.type === 'content' || s.type === 'dialogue');
+      const questions = [];
+
+      contentScenes.slice(0, 4).forEach(s => {
+        const text = (s.body || s.text || '').replace(/<[^>]+>/g,'');
+        const words = text.split(/\s+/).filter(w => w.length > 5);
+        if (words.length < 8) return;
+
+        // Build a fill-in-the-blank style question from the text
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 30);
+        if (!sentences.length) return;
+
+        const sentence = sentences[0].trim();
+        const keyWords = words.filter(w => w.length > 6).slice(0, 4);
+        if (keyWords.length < 2) return;
+
+        const correct = keyWords[0];
+        const wrong1 = keyWords[1] || 'None of these';
+        const wrong2 = keyWords[2] || 'All of the above';
+        const wrong3 = 'Cannot be determined';
+
+        const options = [correct, wrong1, wrong2, wrong3];
+        // Shuffle wrong answers but keep correct at position 0
+        questions.push({
+          q: `Based on this lesson, which of the following is a key concept? "${sentence.substring(0,80)}..."`,
+          options: options,
+          correct: 0,
+          feedback_right: '✓ Correct! You understood that part of the lesson!',
+          feedback_wrong: `The concept from the lesson was: "${correct}"`
+        });
+      });
+
+      // Ensure at least 2 questions
+      while (questions.length < 2) {
+        questions.push({
+          q: `Checkpoint ${cpNum}: Which of the following best describes the main idea of this section?`,
+          options: ['The concept described in the lesson', 'An unrelated topic', 'The opposite of the lesson content', 'None of the above'],
+          correct: 0,
+          feedback_right: '✓ Correct! Keep going!',
+          feedback_wrong: 'The lesson described the concept in the first option.'
+        });
+      }
+
+      return questions.slice(0, 4);
+    }
+
+    function showAdvPreview(lessonData) {
+      const summary = document.getElementById('adv-parse-summary');
+      const preview = document.getElementById('adv-scenes-preview');
+      const chapters = lessonData.scenes.filter(s=>s.type==='chapter').length;
+      const checkpoints = lessonData.scenes.filter(s=>s.type==='checkpoint').length;
+      const dialogues = lessonData.scenes.filter(s=>s.type==='dialogue').length;
+      const content = lessonData.scenes.filter(s=>s.type==='content'||s.type==='two_col'||s.type==='highlight').length;
+
+      summary.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.75rem;">
+        <div style="text-align:center;background:rgba(0,170,255,.1);border-radius:10px;padding:.5rem;">
+          <div style="font-family:'Fredoka One',cursive;font-size:1.4rem;color:#00aaff;">${chapters}</div>
+          <div style="font-size:.65rem;color:#7a6090;font-weight:700;">CHAPTERS</div>
+        </div>
+        <div style="text-align:center;background:rgba(0,212,170,.1);border-radius:10px;padding:.5rem;">
+          <div style="font-family:'Fredoka One',cursive;font-size:1.4rem;color:#00d4aa;">${dialogues}</div>
+          <div style="font-size:.65rem;color:#7a6090;font-weight:700;">DIALOGUES</div>
+        </div>
+        <div style="text-align:center;background:rgba(255,215,0,.1);border-radius:10px;padding:.5rem;">
+          <div style="font-family:'Fredoka One',cursive;font-size:1.4rem;color:#ffd700;">${content}</div>
+          <div style="font-size:.65rem;color:#7a6090;font-weight:700;">CONTENT</div>
+        </div>
+        <div style="text-align:center;background:rgba(255,105,180,.1);border-radius:10px;padding:.5rem;">
+          <div style="font-family:'Fredoka One',cursive;font-size:1.4rem;color:#ff69b4;">${checkpoints}</div>
+          <div style="font-size:.65rem;color:#7a6090;font-weight:700;">CHECKPOINTS</div>
+        </div>
+      </div>
+      <p style="font-size:.8rem;color:#c9b8e8;font-weight:700;">✅ <strong style="color:#00d4aa;">${lessonData.scenes.length} scenes</strong> generated from your lesson. Preview below:</p>`;
+
+      preview.innerHTML = lessonData.scenes.map((s,i) => {
+        const icons = {chapter:'📖',dialogue:'💬',content:'📋',two_col:'📊',highlight:'💡',checkpoint:'🚩'};
+        const colors = {chapter:'rgba(0,170,255,.2)',dialogue:'rgba(0,212,170,.15)',content:'rgba(255,255,255,.05)',two_col:'rgba(255,215,0,.1)',highlight:'rgba(0,212,170,.1)',checkpoint:'rgba(255,105,180,.15)'};
+        const preview_text = s.title || s.text?.substring(0,60) || s.q?.substring(0,60) || '';
+        return `<div style="display:flex;align-items:center;gap:.75rem;padding:.5rem .75rem;background:${colors[s.type]||'rgba(0,0,0,.2)'};border-radius:8px;margin-bottom:.35rem;font-size:.78rem;font-weight:700;">
+          <span style="flex-shrink:0;">${icons[s.type]||'•'}</span>
+          <span style="color:#7a6090;font-family:'Space Mono',monospace;width:20px;">${i+1}</span>
+          <span style="color:#c9b8e8;text-transform:uppercase;font-size:.65rem;width:70px;flex-shrink:0;">${s.type}</span>
+          <span style="color:#fffde7;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${preview_text}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function deployAdventure() {
+      const title = document.getElementById('adv-title').value.trim() || parsedLessonData?.title || 'Adventure Lesson';
+      const subject = document.getElementById('adv-subject').value.trim() || parsedLessonData?.subject || '';
+      if (!parsedLessonData) { showToast('Upload an HTML lesson first!', 'error'); return; }
+      const sections = [...document.getElementById('adv-sections').selectedOptions].map(o=>o.value);
+      
+      // Update title in lesson data
+      parsedLessonData.title = title;
+      parsedLessonData.subject = subject;
+      
+      const lessonJSON = JSON.stringify(parsedLessonData);
+      
+      // Save quiz record
+      const quizId = String(Date.now());
+      const quizRecord = {
+        id: quizId,
+        title, subject, time: 30, sections,
+        category: 'adventure',
+        questions: JSON.stringify([{question:'HTML_LESSON',options:['Start'],correct:0}]),
+        locked: false,
+        lessonType: 'html',
+        lessonData: lessonJSON,
+        createdAt: new Date().toISOString()
+      };
+
+      // Save to localStorage for immediate use
+      const quizzes = JSON.parse(localStorage.getItem('s_quizzes')||'[]');
+      quizzes.push(quizRecord);
+      localStorage.setItem('s_quizzes', JSON.stringify(quizzes));
+      localStorage.setItem('adventure_lesson_' + quizId, lessonJSON);
+
+      // Save to Sheets (fire and forget)
+      sheetsPost('addQuiz', {
+        id: quizId, title, subject, time: '30',
+        sections: sections.join(','),
+        locked: 'false', category: 'adventure',
+        questions: JSON.stringify([{question:'HTML_LESSON',options:['Start'],correct:0}]),
+        lessonData: lessonJSON,
+        createdAt: new Date().toISOString()
+      });
+
+      showToast(`🗺️ Adventure "${title}" deployed! ${parsedLessonData.scenes.length} scenes ready for heroes! 🌟`, 'success');
+      clearAdvHTML();
+      document.getElementById('adv-title').value = '';
+      document.getElementById('adv-subject').value = '';
+      setTimeout(()=>showTab('quizzes'), 1500);
+    }
+
+    function clearAdvHTML() {
+      adventureHTML = null;
+      parsedLessonData = null;
+      document.getElementById('adv-preview').classList.add('hidden');
+      document.getElementById('adv-html-input').value = '';
+    }
+
+    // Keep legacy PDF functions as no-ops to avoid errors
+    function handlePDFUpload(input) {}
+    function clearPDF() {}
 
     /* ══ TRAINING CAMP DEPLOY (Flappy Bird) ══ */
     function handleTrainingUpload(input) {
