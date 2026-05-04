@@ -360,6 +360,16 @@ async function init(){
     student=getCachedStudent(sess.email)||{email:sess.email,name:sess.name||'Hero',section:sess.section||'',xp:0,lootBags:0};
   }
   quiz=await fetchQuizById(id);
+
+  // Adventure/Lesson category → redirect to dedicated lesson viewer
+  if(quiz && (quiz.category==='adventure'||quiz.category==='lesson')){
+    // Store quiz info for the lesson viewer
+    sessionStorage.setItem('adventure_quiz_id', id);
+    sessionStorage.setItem('adventure_quiz_title', quiz.title||'Adventure Lesson');
+    window.location.href='adventure-lesson.html?id='+id+(isPreview?'&preview=1':'');
+    return;
+  }
+
   if(!quiz||!quiz.questions||quiz.questions.length===0){
     document.getElementById('loading-screen').innerHTML='<div style="text-align:center;padding:2rem;"><div style="font-size:3rem;margin-bottom:1rem;">😕</div><p style="font-family:\'Fredoka One\',cursive;font-size:1.3rem;color:#c9b8e8;">Quest not found or has no questions.</p><button onclick="goHome()" style="margin-top:1.5rem;background:linear-gradient(135deg,#00aaff,#0055aa);color:white;border:none;padding:.75rem 2rem;border-radius:50px;font-family:\'Fredoka One\',cursive;font-size:1rem;cursor:pointer;">← Back to Hero Portal</button></div>';
     return;
