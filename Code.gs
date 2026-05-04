@@ -1,10 +1,9 @@
 // ════════════════════════════════════════════════
-// PROJECT SOLOMON · Google Apps Script v7
+// PROJECT SOLOMON · Google Apps Script v8
 // Execute as: Me  |  Access: Anyone
 // ════════════════════════════════════════════════
 
 var SS = SpreadsheetApp.getActiveSpreadsheet();
-var ANTHROPIC_API_KEY = 'YOUR_ANTHROPIC_API_KEY_HERE';
 
 function resp(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
@@ -40,8 +39,7 @@ function handleAction(p) {
     else if (a === 'fixSheets')        result = fixSheets();
     else if (a === 'saveLesson')       result = saveLesson(p);
     else if (a === 'getLesson')        result = getLesson(p.quizId);
-    else if (a === 'addQuizFull')      result = addQuizFull(p);
-    else result = { ok: true, status: 'Solomon API v7 Online' };
+    else result = { ok: true, status: 'Solomon API v8 Online' };
   } catch(err) {
     result = { ok: false, error: err.message };
   }
@@ -49,108 +47,51 @@ function handleAction(p) {
 }
 
 // ══════════════════════════════════════════════
-// LESSON DATA — stored in dedicated LessonData sheet
+// LESSON DATA — saved to Drive, ID stored in LessonData sheet
 // ══════════════════════════════════════════════
 
-function getLessonSheet() {
-  var sh = SS.getSheetByName('LessonData');
-  if (!sh) {
-    sh = SS.insertSheet('LessonData');
-    sh.appendRow(['quizId', 'lessonData', 'savedAt']);
-    sh.setFrozenRows(1);
-  }
-  return sh;
+function getLessonFolder() {
+  var folders = DriveApp.getFoldersByName('SolomonLessons');
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder('SolomonLessons');
 }
 
 function saveLesson(p) {
   var quizId = String(p.quizId || '').trim();
   var lessonData = p.lessonData || '';
-  var chunk = p.chunk !== undefined ? parseInt(p.chunk) : -1;
-  var totalChunks = p.totalChunks !== undefined ? parseInt(p.totalChunks) : 1;
-
   if (!quizId) return { ok: false, error: 'quizId required' };
-  if (!lessonData) return { ok: false, error: 'lessonData empty' };
+  if (!lessonData || lessonData.length < 5) return { ok: false, error: 'lessonData empty, size: ' + lessonData.length };
 
-  var sh = getLessonSheet();
-  var vals = sh.getDataRange().getValues();
-
-  if (chunk === -1 || totalChunks === 1) {
-    // Single chunk — save directly
+  try {
+    var folder = getLessonFolder();
+    var fileName = 'lesson_' + quizId + '.json';
+    
+    // Delete existing file if present
+    var existing = folder.getFilesByName(fileName);
+    while (existing.hasNext()) existing.next().setTrashed(true);
+    
+    // Create new file with lesson data
+    var file = folder.createFile(fileName, lessonData, 'application/json');
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    var fileId = file.getId();
+    
+    // Store the file ID in the LessonData sheet
+    var sh = getLessonSheet();
+    var vals = sh.getDataRange().getValues();
+    var found = false;
     for (var i = 1; i < vals.length; i++) {
       if (String(vals[i][0]).trim() === quizId) {
-        sh.getRange(i + 1, 2).setValue(lessonData);
+        sh.getRange(i + 1, 2).setValue(fileId);
         sh.getRange(i + 1, 3).setValue(new Date().toISOString());
-        return { ok: true, updated: true };
+        found = true; break;
       }
     }
-    sh.appendRow([quizId, lessonData, new Date().toISOString()]);
-    return { ok: true, inserted: true };
+    if (!found) sh.appendRow([quizId, fileId, new Date().toISOString()]);
+    
+    return { ok: true, fileId: fileId, size: lessonData.length };
+  } catch(e) {
+    return { ok: false, error: e.message };
   }
-
-  // Multi-chunk: save to a temp column, assemble when all chunks arrive
-  // Use a ChunkCache sheet to store chunks temporarily
-  var cacheSheet = SS.getSheetByName('ChunkCache');
-  if (!cacheSheet) {
-    cacheSheet = SS.insertSheet('ChunkCache');
-    cacheSheet.appendRow(['key', 'data', 'ts']);
-    cacheSheet.setFrozenRows(1);
-  }
-
-  // Save this chunk with key = quizId_chunkN
-  var chunkKey = quizId + '_chunk' + chunk;
-  var cacheVals = cacheSheet.getDataRange().getValues();
-  var found = false;
-  for (var ci = 1; ci < cacheVals.length; ci++) {
-    if (String(cacheVals[ci][0]) === chunkKey) {
-      cacheSheet.getRange(ci + 1, 2).setValue(lessonData);
-      found = true; break;
-    }
-  }
-  if (!found) cacheSheet.appendRow([chunkKey, lessonData, new Date().toISOString()]);
-
-  // Check if all chunks are present
-  var assembled = '';
-  var allPresent = true;
-  cacheVals = cacheSheet.getDataRange().getValues(); // refresh
-  for (var n = 0; n < totalChunks; n++) {
-    var key = quizId + '_chunk' + n;
-    var found2 = false;
-    for (var ci2 = 1; ci2 < cacheVals.length; ci2++) {
-      if (String(cacheVals[ci2][0]) === key) {
-        assembled += String(cacheVals[ci2][1]);
-        found2 = true; break;
-      }
-    }
-    if (!found2) { allPresent = false; break; }
-  }
-
-  if (allPresent) {
-    // All chunks received — save assembled lesson
-    var shVals = sh.getDataRange().getValues();
-    var existsRow = -1;
-    for (var si = 1; si < shVals.length; si++) {
-      if (String(shVals[si][0]).trim() === quizId) { existsRow = si + 1; break; }
-    }
-    if (existsRow > 0) {
-      sh.getRange(existsRow, 2).setValue(assembled);
-      sh.getRange(existsRow, 3).setValue(new Date().toISOString());
-    } else {
-      sh.appendRow([quizId, assembled, new Date().toISOString()]);
-    }
-    // Clean up chunk cache
-    for (var n2 = 0; n2 < totalChunks; n2++) {
-      var key2 = quizId + '_chunk' + n2;
-      var cacheVals2 = cacheSheet.getDataRange().getValues();
-      for (var ci3 = 1; ci3 < cacheVals2.length; ci3++) {
-        if (String(cacheVals2[ci3][0]) === key2) {
-          cacheSheet.deleteRow(ci3 + 1); break;
-        }
-      }
-    }
-    return { ok: true, assembled: true, size: assembled.length };
-  }
-
-  return { ok: true, chunk_saved: chunk, waiting_for_more: true };
 }
 
 function getLesson(quizId) {
@@ -162,14 +103,29 @@ function getLesson(quizId) {
     var vals = sh.getDataRange().getValues();
     for (var i = 1; i < vals.length; i++) {
       if (String(vals[i][0]).trim() === quizId) {
-        var ld = String(vals[i][1] || '');
-        if (ld.length > 5) return { ok: true, lessonData: ld };
+        var fileId = String(vals[i][1] || '').trim();
+        if (!fileId) return { ok: false, error: 'no_file_id' };
+        
+        // Read the lesson JSON from Drive
+        var file = DriveApp.getFileById(fileId);
+        var content = file.getBlob().getDataAsString();
+        return { ok: true, lessonData: content };
       }
     }
     return { ok: false, error: 'not_found' };
   } catch(e) {
     return { ok: false, error: e.message };
   }
+}
+
+function getLessonSheet() {
+  var sh = SS.getSheetByName('LessonData');
+  if (!sh) {
+    sh = SS.insertSheet('LessonData');
+    sh.appendRow(['quizId', 'driveFileId', 'savedAt']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
 }
 
 // ══════════════════════════════
@@ -197,7 +153,6 @@ function getStudentSheet() {
     sh.setFrozenRows(1);
     return sh;
   }
-  // Fix header if needed
   if (sh.getLastRow() >= 1) {
     var first = String(sh.getRange(1,1).getValue()||'').toLowerCase().trim();
     if (first !== 'email') {
@@ -312,7 +267,7 @@ function loadQuestions(quizId) {
     if (String(getCell(data.rows[i], data.headers, 'quizid')) === String(quizId))
       return String(getCell(data.rows[i], data.headers, 'questions')||'[]');
   }
-  return null;
+  return '[]';
 }
 
 function addQuiz(d) {
@@ -328,28 +283,6 @@ function addQuiz(d) {
     String(d.sections||''), false, String(d.category||'practice'),
     'stored_in_QData', String(d.createdAt||new Date().toISOString())]);
   return { ok: true };
-}
-
-function addQuizFull(d) {
-  // Like addQuiz but saves the full questions JSON (including embedded lessonData)
-  var sh = getQuizSheet();
-  var data = getSheetData('Quizzes');
-  var id = String(d.id || Date.now());
-  // Update if exists, insert if not
-  for (var i = 0; i < data.rows.length; i++) {
-    if (String(getCell(data.rows[i], data.headers, 'id')) === id) {
-      // Already exists — just update questions in QData
-      saveQuestions(id, String(d.questions||'[]'));
-      return { ok: true, updated: true };
-    }
-  }
-  // New quiz
-  var questionsJson = String(d.questions||'[]');
-  saveQuestions(id, questionsJson);
-  sh.appendRow([id, String(d.title||''), String(d.subject||''), Number(d.time)||30,
-    String(d.sections||''), false, String(d.category||'adventure'),
-    'stored_in_QData', String(d.createdAt||new Date().toISOString())]);
-  return { ok: true, inserted: true };
 }
 
 function updateQuiz(d) {
@@ -377,7 +310,7 @@ function getQuizzes(section) {
     if (locked === true || String(locked).toUpperCase() === 'TRUE') continue;
     var secs = String(getCell(row, data.headers, 'sections')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
     if (section && secs.length && secs.indexOf(section) < 0) continue;
-    out.push(buildQuiz(row, data.headers, false)); // don't include lessonData in list
+    out.push(buildQuiz(row, data.headers));
   }
   return { ok: true, quizzes: out };
 }
@@ -387,17 +320,17 @@ function getQuizById(id) {
   var data = getSheetData('Quizzes');
   for (var i = 0; i < data.rows.length; i++) {
     if (String(getCell(data.rows[i], data.headers, 'id')) === String(id))
-      return { ok: true, quiz: buildQuiz(data.rows[i], data.headers, true) }; // include lessonData
+      return { ok: true, quiz: buildQuiz(data.rows[i], data.headers) };
   }
   return { ok: false, error: 'not_found' };
 }
 
-function buildQuiz(row, headers, includeLessonData) {
+function buildQuiz(row, headers) {
   var id = String(getCell(row, headers, 'id')||'');
-  var questionsJson = loadQuestions(id) || '[]';
+  var questionsJson = loadQuestions(id);
   var secs = String(getCell(row, headers, 'sections')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
   var locked = getCell(row, headers, 'locked');
-  var quiz = {
+  return {
     id:        id,
     title:     String(getCell(row, headers, 'title')||''),
     subject:   String(getCell(row, headers, 'subject')||''),
@@ -408,21 +341,6 @@ function buildQuiz(row, headers, includeLessonData) {
     questions: questionsJson,
     createdAt: String(getCell(row, headers, 'createdat')||'')
   };
-  // Extract lessonData from questions field if it's an adventure lesson
-  if (includeLessonData) {
-    try {
-      var qParsed = JSON.parse(questionsJson);
-      if (Array.isArray(qParsed) && qParsed[0] && qParsed[0].question === '__ADVENTURE_LESSON__') {
-        quiz.lessonData = qParsed[0].lessonData || '';
-      }
-    } catch(e) {}
-    // Also try dedicated LessonData sheet as backup
-    if (!quiz.lessonData) {
-      var ld = getLesson(id);
-      if (ld.ok) quiz.lessonData = ld.lessonData;
-    }
-  }
-  return quiz;
 }
 
 // ══════════════════════════════
@@ -508,5 +426,5 @@ function fixSheets() {
     }
   }
   getQuizSheet(); getScoreSheet(); getQDataSheet(); getLessonSheet();
-  return { ok: true, message: 'All sheets ready including LessonData.' };
+  return { ok: true, message: 'All sheets ready.' };
 }

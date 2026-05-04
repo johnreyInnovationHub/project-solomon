@@ -1462,22 +1462,11 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
       const lessonJSON = JSON.stringify(parsedLessonData);
       const quizId = String(Date.now());
 
-      // STRATEGY: Embed the ENTIRE lesson JSON inside the questions field.
-      // The questions column is already proven to work for saving/loading.
-      // We wrap the lesson as a special first "question" with the full lesson as a property.
-      // This is stored in QData sheet via the existing working pipeline.
-      const questionsWithLesson = JSON.stringify([{
-        question: '__ADVENTURE_LESSON__',
-        lessonData: lessonJSON,
-        options: ['Begin Adventure'],
-        correct: 0
-      }]);
-
-      // Save to localStorage
+      // Save to localStorage immediately
       const quizRecord = {
         id: quizId, title, subject, time: 30, sections,
         category: 'adventure',
-        questions: questionsWithLesson,
+        questions: JSON.stringify([{question:'HTML_LESSON',options:['Start'],correct:0}]),
         locked: false, lessonType: 'html',
         createdAt: new Date().toISOString()
       };
@@ -1486,31 +1475,46 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
       localStorage.setItem('s_quizzes', JSON.stringify(quizzes));
       localStorage.setItem('adventure_lesson_' + quizId, lessonJSON);
 
-      // Save to Sheets using no-cors POST
-      // The questions field (containing lessonData) goes through the QData sheet
+      // Save to Google Drive via Apps Script POST
+      // This uses doPost which reads the full body — no URL size limit
       const apiUrl = getApiUrl();
+      let cloudSaved = false;
       if (apiUrl) {
-        btn.textContent = '☁️ Uploading to Sheets...';
+        btn.textContent = '☁️ Saving to Google Drive...';
         try {
+          // Step 1: Save quiz metadata via no-cors POST
           await fetch(apiUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            redirect: 'follow',
+            method: 'POST', mode: 'no-cors', redirect: 'follow',
             body: JSON.stringify({
-              action: 'addQuizFull',
-              id: quizId, title, subject, time: 30,
-              sections: sections.join(','),
-              locked: false, category: 'adventure',
-              questions: questionsWithLesson,
+              action: 'addQuiz', id: quizId, title, subject, time: 30,
+              sections: sections.join(','), locked: false, category: 'adventure',
+              questions: JSON.stringify([{question:'HTML_LESSON',options:['Start'],correct:0}]),
               createdAt: new Date().toISOString()
             })
           });
-          console.log('Lesson uploaded to Sheets (no-cors)');
-        } catch(e) { console.warn('Upload err:', e.message); }
+
+          // Step 2: Save lesson data to Drive via POST
+          // Apps Script doPost can read large body payloads
+          btn.textContent = '☁️ Uploading lesson data...';
+          const saveRes = await fetch(apiUrl, {
+            method: 'POST', mode: 'no-cors', redirect: 'follow',
+            body: JSON.stringify({
+              action: 'saveLesson',
+              quizId: quizId,
+              lessonData: lessonJSON
+            })
+          });
+          // no-cors means we can't read the response, but Drive write should succeed
+          cloudSaved = true;
+          console.log('Lesson data sent to Drive via POST');
+        } catch(e) {
+          console.warn('Cloud save error:', e.message);
+        }
       }
 
       btn.textContent = '🗺️ Deploy Adventure!'; btn.disabled = false;
-      showToast(`🗺️ "${title}" deployed! ${parsedLessonData.scenes.length} scenes ready! 🌟`, 'success');
+      const cloudMsg = apiUrl ? ' Syncing to cloud...' : ' (Saved locally)';
+      showToast(`🗺️ "${title}" deployed! ${parsedLessonData.scenes.length} scenes ready!${cloudMsg}`, 'success');
       clearAdvHTML();
       document.getElementById('adv-title').value = '';
       document.getElementById('adv-subject').value = '';
