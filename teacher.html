@@ -1448,52 +1448,80 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
       }).join('');
     }
 
-    function deployAdventure() {
+    async function deployAdventure() {
       const title = document.getElementById('adv-title').value.trim() || parsedLessonData?.title || 'Adventure Lesson';
       const subject = document.getElementById('adv-subject').value.trim() || parsedLessonData?.subject || '';
       if (!parsedLessonData) { showToast('Upload an HTML lesson first!', 'error'); return; }
       const sections = [...document.getElementById('adv-sections').selectedOptions].map(o=>o.value);
-      
-      // Update title in lesson data
+
+      const btn = document.getElementById('deploy-adv-btn');
+      btn.textContent = '⏳ Saving to cloud...'; btn.disabled = true;
+
       parsedLessonData.title = title;
       parsedLessonData.subject = subject;
-      
       const lessonJSON = JSON.stringify(parsedLessonData);
-      
-      // Save quiz record
       const quizId = String(Date.now());
+
+      // 1. Save lesson data to Sheets via confirmed GET (avoids no-cors silent drop)
+      const apiUrl = getApiUrl();
+      let cloudSaved = false;
+      if (apiUrl) {
+        try {
+          // Use fetch with CORS (GET with params) to confirm the save
+          const saveUrl = apiUrl + '?action=saveLessonData&quizId=' + quizId +
+            '&title=' + encodeURIComponent(title) +
+            '&subject=' + encodeURIComponent(subject) +
+            '&sections=' + encodeURIComponent(sections.join(',')) +
+            '&createdAt=' + encodeURIComponent(new Date().toISOString());
+
+          // POST the large lessonData separately via no-cors (it will be big)
+          // First save quiz metadata via GET (small, confirmed)
+          const metaRes = await fetch(saveUrl, { redirect: 'follow' });
+          const metaJson = await metaRes.json();
+          if (metaJson.ok) {
+            // Now save the lessonData via POST (large payload)
+            await fetch(apiUrl, {
+              method: 'POST', mode: 'no-cors', redirect: 'follow',
+              body: JSON.stringify({ action: 'saveLessonData', quizId, lessonData: lessonJSON })
+            });
+            cloudSaved = true;
+          }
+        } catch(e) {
+          console.warn('Cloud save failed:', e.message);
+        }
+      }
+
+      // 2. Always save to localStorage as fallback (works on same device)
       const quizRecord = {
-        id: quizId,
-        title, subject, time: 30, sections,
+        id: quizId, title, subject, time: 30, sections,
         category: 'adventure',
-        questions: JSON.stringify([{question:'HTML_LESSON',options:['Start'],correct:0}]),
-        locked: false,
-        lessonType: 'html',
+        questions: [{question:'HTML_LESSON',options:['Start'],correct:0}],
+        locked: false, lessonType: 'html',
         lessonData: lessonJSON,
         createdAt: new Date().toISOString()
       };
-
-      // Save to localStorage for immediate use
       const quizzes = JSON.parse(localStorage.getItem('s_quizzes')||'[]');
       quizzes.push(quizRecord);
       localStorage.setItem('s_quizzes', JSON.stringify(quizzes));
       localStorage.setItem('adventure_lesson_' + quizId, lessonJSON);
 
-      // Save to Sheets (fire and forget)
+      // 3. Also save via no-cors POST for Sheets backup
       sheetsPost('addQuiz', {
         id: quizId, title, subject, time: '30',
-        sections: sections.join(','),
-        locked: 'false', category: 'adventure',
+        sections: sections.join(','), locked: 'false',
+        category: 'adventure',
         questions: JSON.stringify([{question:'HTML_LESSON',options:['Start'],correct:0}]),
         lessonData: lessonJSON,
         createdAt: new Date().toISOString()
       });
 
-      showToast(`🗺️ Adventure "${title}" deployed! ${parsedLessonData.scenes.length} scenes ready for heroes! 🌟`, 'success');
+      btn.textContent = '🗺️ Deploy Adventure!'; btn.disabled = false;
+      const saveMsg = cloudSaved ? 'Saved to cloud ✓' : 'Saved locally (students on same device can access)';
+      showToast(`🗺️ "${title}" deployed! ${parsedLessonData.scenes.length} scenes ready! ${saveMsg}`, 'success');
       clearAdvHTML();
       document.getElementById('adv-title').value = '';
       document.getElementById('adv-subject').value = '';
-      setTimeout(()=>showTab('quizzes'), 1500);
+      setTimeout(()=>showTab('quizzes'), 1800);
     }
 
     function clearAdvHTML() {

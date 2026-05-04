@@ -6,7 +6,7 @@
 var SS = SpreadsheetApp.getActiveSpreadsheet();
 
 // ══ PASTE YOUR ANTHROPIC API KEY HERE ══
-var ANTHROPIC_API_KEY = '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';
+var ANTHROPIC_API_KEY = 'YOUR_ANTHROPIC_API_KEY_HERE';
 
 function resp(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
@@ -40,6 +40,8 @@ function handleAction(p) {
     else if (a === 'addScore')          result = addScore(p);
     else if (a === 'fixSheets')         result = fixSheets();
     else if (a === 'generateAdventure') result = generateAdventure(p);
+    else if (a === 'saveLessonData')    result = saveLessonData(p);
+    else if (a === 'getLessonData')     result = getLessonData(p.quizId);
     else result = { ok:true, status:'Solomon API v6 Online' };
   } catch(err) {
     result = { ok:false, error: err.message + ' | ' + err.stack };
@@ -361,14 +363,19 @@ function buildQuiz(row, headers) {
     var inlineQ = String(getCell(row, headers, 'questions')||'[]');
     questionsJson = (inlineQ && inlineQ !== 'stored_in_QData') ? inlineQ : '[]';
   }
-  // Load lessonData if available
+  // Load lessonData if available (from LessonData sheet)
   var lessonData = null;
   try {
-    var ldData = getSheetData('LessonData');
-    for (var i = 0; i < ldData.rows.length; i++) {
-      if (String(getCell(ldData.rows[i], ldData.headers, 'quizid')) === id) {
-        lessonData = String(getCell(ldData.rows[i], ldData.headers, 'lessondata')||'');
-        break;
+    var ldSh = SS.getSheetByName('LessonData');
+    if (ldSh && ldSh.getLastRow() > 1) {
+      var ldData = getSheetData('LessonData');
+      for (var i = 0; i < ldData.rows.length; i++) {
+        var ldId = String(getCell(ldData.rows[i], ldData.headers, 'quizid')||'').trim();
+        if (ldId === id) {
+          var rawLD = String(getCell(ldData.rows[i], ldData.headers, 'lessondata')||'');
+          lessonData = rawLD.length > 10 ? rawLD : null;
+          break;
+        }
       }
     }
   } catch(e) {}
@@ -458,6 +465,79 @@ function buildScore(row, headers) {
     timeTaken:   String(getCell(row, headers, 'timetaken')||''),
     createdAt:   String(getCell(row, headers, 'createdat')||'')
   };
+}
+
+// ══════════════════════════════
+// GET LESSON DATA
+// ══════════════════════════════
+function getLessonData(quizId) {
+  quizId = String(quizId || '').trim();
+  if (!quizId) return { ok: false, error: 'quizId required' };
+  try {
+    var ldSh = SS.getSheetByName('LessonData');
+    if (!ldSh) return { ok: false, error: 'LessonData sheet not found' };
+    var ldData = getSheetData('LessonData');
+    for (var i = 0; i < ldData.rows.length; i++) {
+      var rowId = String(getCell(ldData.rows[i], ldData.headers, 'quizid') || '').trim();
+      if (rowId === quizId) {
+        var ld = String(getCell(ldData.rows[i], ldData.headers, 'lessondata') || '');
+        if (ld.length > 10) return { ok: true, lessonData: ld };
+      }
+    }
+    return { ok: false, error: 'not_found' };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+// ══════════════════════════════
+// SAVE LESSON DATA
+// Saves adventure lesson JSON to LessonData sheet
+// Called via GET (metadata) then POST (lessonData)
+// ══════════════════════════════
+function saveLessonData(p) {
+  var quizId = String(p.quizId || '');
+  if (!quizId) return { ok: false, error: 'quizId required' };
+
+  // If lessonData is provided (POST call), save it
+  if (p.lessonData) {
+    var ldSh = getLessonDataSheet();
+    var ldData = getSheetData('LessonData');
+    // Check if row already exists
+    for (var i = 0; i < ldData.rows.length; i++) {
+      if (String(getCell(ldData.rows[i], ldData.headers, 'quizid')) === quizId) {
+        // Update existing
+        ldSh.getRange(i + 2, 2).setValue(String(p.lessonData));
+        return { ok: true, updated: true };
+      }
+    }
+    // Insert new
+    ldSh.appendRow([quizId, String(p.lessonData)]);
+    return { ok: true, inserted: true };
+  }
+
+  // GET call — save quiz metadata to Quizzes sheet and confirm
+  var qSh = getQuizSheet();
+  var qData = getSheetData('Quizzes');
+  // Check if quiz already exists
+  for (var i = 0; i < qData.rows.length; i++) {
+    if (String(getCell(qData.rows[i], qData.headers, 'id')) === quizId) {
+      return { ok: true, exists: true };
+    }
+  }
+  // Add to Quizzes sheet
+  qSh.appendRow([
+    quizId,
+    String(p.title || ''),
+    String(p.subject || ''),
+    30,
+    String(p.sections || ''),
+    false,
+    'adventure',
+    'stored_in_LessonData',
+    String(p.createdAt || new Date().toISOString())
+  ]);
+  return { ok: true, created: true };
 }
 
 // ══════════════════════════════

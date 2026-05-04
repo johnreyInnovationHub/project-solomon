@@ -225,55 +225,97 @@ function animateLoading(){
 }
 
 /* ══ INIT ══ */
+const ADVENTURE_API_URL='https://script.google.com/macros/s/AKfycbxjrl_Uq_wO4MsjB6f_v9MOQ13FrFccQxDsykZO-N5CGG7jm7oCMCqmY6roNytUZngn/exec';
+
+async function fetchWithTimeout(url,secs=12){
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),secs*1000);
+  try{const r=await fetch(url,{redirect:'follow',signal:ctrl.signal});clearTimeout(t);return r;}
+  catch(e){clearTimeout(t);throw e;}
+}
+
 async function init(){
   const params=new URLSearchParams(window.location.search);
   const quizId=params.get('id');
   const isPreview=params.get('preview')==='1';
   const iv=animateLoading();
-
-  // Try to get lesson data from localStorage
   let data=null;
-  if(quizId){
-    const stored=localStorage.getItem('adventure_lesson_'+quizId);
-    if(stored){try{data=JSON.parse(stored);}catch(e){}}
-  }
 
-  if(!data){
-    // Try local quizzes
+  // SOURCE 1: localStorage keyed by quizId (fastest — works if teacher used same device)
+  if(quizId){
     try{
-      const quizzes=JSON.parse(localStorage.getItem('s_quizzes')||'[]');
-      const q=quizzes.find(q=>String(q.id)===String(quizId));
-      if(q&&q.lessonData){data=JSON.parse(q.lessonData);}
+      const s=localStorage.getItem('adventure_lesson_'+quizId);
+      if(s&&s.length>20){data=JSON.parse(s);console.log('✅ Loaded from localStorage key');}
     }catch(e){}
   }
 
-  // Try fetching from Google Sheets (lessonData stored server-side)
-  if(!data && quizId){
-    document.getElementById('ls1').textContent='☁️ Loading lesson from cloud...';
+  // SOURCE 2: s_quizzes array in localStorage (teacher's local quiz list)
+  if(!data){
     try{
-      const HARDCODED_API_URL='https://script.google.com/macros/s/AKfycbxjrl_Uq_wO4MsjB6f_v9MOQ13FrFccQxDsykZO-N5CGG7jm7oCMCqmY6roNytUZngn/exec';
-      const apiUrl=localStorage.getItem('solomon_api_url')||HARDCODED_API_URL;
-      const qs=new URLSearchParams({action:'getQuizById',id:String(quizId)}).toString();
-      const controller=new AbortController();
-      const timer=setTimeout(()=>controller.abort(),15000);
-      const res=await fetch(`${apiUrl}?${qs}`,{redirect:'follow',signal:controller.signal});
-      clearTimeout(timer);
-      const json=await res.json();
-      if(json.ok&&json.quiz&&json.quiz.lessonData){
-        try{data=JSON.parse(json.quiz.lessonData);}catch(e){}
-        // Cache it
-        if(data) localStorage.setItem('adventure_lesson_'+quizId,JSON.stringify(data));
+      const quizzes=JSON.parse(localStorage.getItem('s_quizzes')||'[]');
+      const q=quizzes.find(q=>String(q.id)===String(quizId));
+      if(q&&q.lessonData&&q.lessonData.length>20){
+        data=typeof q.lessonData==='string'?JSON.parse(q.lessonData):q.lessonData;
+        console.log('✅ Loaded from s_quizzes');
       }
-    }catch(e){console.log('Cloud fetch failed:',e);}
+    }catch(e){}
   }
 
+  // SOURCE 3: Google Sheets — getQuizById (includes lessonData from LessonData tab)
+  if(!data&&quizId){
+    document.getElementById('ls1').textContent='☁️ Fetching from cloud...';
+    document.getElementById('ls2').className='loading-step active';
+    try{
+      const apiUrl=localStorage.getItem('solomon_api_url')||ADVENTURE_API_URL;
+      const url=apiUrl+'?action=getQuizById&id='+encodeURIComponent(quizId);
+      const res=await fetchWithTimeout(url,15);
+      const json=await res.json();
+      console.log('getQuizById response:',json.ok, json.quiz?.lessonData?.length);
+      if(json.ok&&json.quiz){
+        const ld=json.quiz.lessonData;
+        if(ld&&ld.length>20){
+          try{
+            data=JSON.parse(ld);
+            localStorage.setItem('adventure_lesson_'+quizId,ld);
+            console.log('✅ Loaded from Sheets getQuizById');
+          }catch(e){console.warn('JSON parse failed:',e.message,ld.substring(0,100));}
+        }
+      }
+    }catch(e){console.warn('Sheets fetch failed:',e.message);}
+  }
+
+  // SOURCE 4: Dedicated getLessonData action
+  if(!data&&quizId){
+    document.getElementById('ls2').textContent='☁️ Trying lesson data store...';
+    try{
+      const apiUrl=localStorage.getItem('solomon_api_url')||ADVENTURE_API_URL;
+      const url=apiUrl+'?action=getLessonData&quizId='+encodeURIComponent(quizId);
+      const res=await fetchWithTimeout(url,12);
+      const json=await res.json();
+      if(json.ok&&json.lessonData&&json.lessonData.length>20){
+        try{
+          data=JSON.parse(json.lessonData);
+          localStorage.setItem('adventure_lesson_'+quizId,json.lessonData);
+          console.log('✅ Loaded from getLessonData');
+        }catch(e){}
+      }
+    }catch(e){console.warn('getLessonData failed:',e.message);}
+  }
+
+  clearInterval(iv);
+
   if(!data){
-    clearInterval(iv);
     document.getElementById('loading-overlay').innerHTML=`
-      <div style="text-align:center;padding:2rem;">
+      <div style="text-align:center;padding:2rem;max-width:480px;">
         <div style="font-size:3rem;margin-bottom:1rem;">😕</div>
-        <p style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:#c9b8e8;margin-bottom:1rem;">Adventure lesson not found.</p>
-        <p style="font-size:.85rem;color:#7a6090;margin-bottom:1.5rem;">Ask your teacher to redeploy this adventure from the Command Tower.</p>
+        <p style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:#c9b8e8;margin-bottom:.75rem;">Adventure lesson not found.</p>
+        <div style="background:rgba(255,215,0,.08);border:2px solid rgba(255,215,0,.3);border-radius:12px;padding:1rem;margin-bottom:1.25rem;font-size:.82rem;color:#ffd700;text-align:left;line-height:1.7;">
+          <strong>What to do:</strong><br>
+          1. Ask your teacher to go to <strong>Deploy Adventure</strong> in the Command Tower<br>
+          2. Re-upload the HTML lesson and click <strong>Deploy Adventure!</strong><br>
+          3. Make sure the Google Sheets API is properly configured<br>
+          4. Then try opening this quest again
+        </div>
         <button onclick="window.location.href='student.html'" style="background:linear-gradient(135deg,#00aaff,#0055aa);color:white;border:none;padding:.75rem 2rem;border-radius:50px;font-family:'Fredoka One',cursive;font-size:1rem;cursor:pointer;">← Back to Hero Portal</button>
       </div>`;
     return;
