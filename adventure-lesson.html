@@ -249,14 +249,29 @@ async function init(){
     }catch(e){}
   }
 
-  // SOURCE 2: s_quizzes array in localStorage (teacher's local quiz list)
+  // SOURCE 2: s_quizzes array in localStorage
   if(!data){
     try{
       const quizzes=JSON.parse(localStorage.getItem('s_quizzes')||'[]');
       const q=quizzes.find(q=>String(q.id)===String(quizId));
-      if(q&&q.lessonData&&q.lessonData.length>20){
-        data=typeof q.lessonData==='string'?JSON.parse(q.lessonData):q.lessonData;
-        console.log('✅ Loaded from s_quizzes');
+      if(q){
+        // Try lessonData field directly
+        if(q.lessonData&&q.lessonData.length>20){
+          data=typeof q.lessonData==='string'?JSON.parse(q.lessonData):q.lessonData;
+          console.log('✅ Loaded from s_quizzes.lessonData');
+        }
+        // Try extracting from questions field (embedded adventure lesson)
+        if(!data&&q.questions){
+          try{
+            const qs=typeof q.questions==='string'?JSON.parse(q.questions):q.questions;
+            if(Array.isArray(qs)&&qs[0]?.question==='__ADVENTURE_LESSON__'&&qs[0].lessonData){
+              const ld=qs[0].lessonData;
+              data=typeof ld==='string'?JSON.parse(ld):ld;
+              localStorage.setItem('adventure_lesson_'+quizId, typeof ld==='string'?ld:JSON.stringify(ld));
+              console.log('✅ Loaded from s_quizzes.questions[0].lessonData');
+            }
+          }catch(e){console.warn('questions parse:',e.message);}
+        }
       }
     }catch(e){}
   }
@@ -272,13 +287,18 @@ async function init(){
       const url=apiUrl+'?action=getLesson&quizId='+encodeURIComponent(quizId);
       const res=await fetchWithTimeout(url,15);
       const json=await res.json();
-      console.log('getLesson:',json.ok,'size:',json.lessonData?.length);
-      if(json.ok&&json.lessonData&&json.lessonData.length>10){
+      // Log ALL keys so we can see exact field names
+      console.log('getLesson full response keys:',Object.keys(json));
+      console.log('getLesson:',json.ok,'lessonData:',json.lessonData?.length,'data:',json.data?.length);
+      // Try all possible field names
+      const ld3 = json.lessonData || json.data || json.lesson || json.content || '';
+      console.log('getLesson resolved ld3 length:',ld3.length);
+      if(json.ok && ld3 && ld3.length>10){
         try{
-          data=JSON.parse(json.lessonData);
-          localStorage.setItem('adventure_lesson_'+quizId,json.lessonData);
-          console.log('✅ Loaded via getLesson');
-        }catch(e){console.warn('parse err:',e.message);}
+          data=JSON.parse(ld3);
+          localStorage.setItem('adventure_lesson_'+quizId,ld3);
+          console.log('✅ Loaded via getLesson, size:',ld3.length);
+        }catch(e){console.warn('parse err:',e.message, ld3.substring(0,100));}
       }
     }catch(e){console.warn('getLesson err:',e.message);}
 
@@ -289,13 +309,27 @@ async function init(){
         const url=apiUrl+'?action=getQuizById&id='+encodeURIComponent(quizId);
         const res=await fetchWithTimeout(url,15);
         const json=await res.json();
-        console.log('getQuizById:',json.ok,'lessonData size:',json.quiz?.lessonData?.length);
-        if(json.ok&&json.quiz?.lessonData&&json.quiz.lessonData.length>10){
+        console.log('getQuizById full keys:',json.quiz?Object.keys(json.quiz):[]);
+        // Try lessonData field
+        let ld4 = json.quiz?.lessonData || '';
+        // Try extracting from questions field
+        if((!ld4||ld4.length<10)&&json.quiz?.questions){
           try{
-            data=JSON.parse(json.quiz.lessonData);
-            localStorage.setItem('adventure_lesson_'+quizId,json.quiz.lessonData);
-            console.log('✅ Loaded via getQuizById');
+            const qs=typeof json.quiz.questions==='string'?JSON.parse(json.quiz.questions):json.quiz.questions;
+            if(Array.isArray(qs)&&qs[0]?.question==='__ADVENTURE_LESSON__'){
+              const ld=qs[0].lessonData;
+              ld4=typeof ld==='string'?ld:JSON.stringify(ld);
+            }
           }catch(e){}
+        }
+        console.log('getQuizById resolved ld4 length:',ld4?.length);
+        if(json.ok && ld4 && ld4.length>10){
+          try{
+            data=typeof ld4==='string'?JSON.parse(ld4):ld4;
+            const saveStr=typeof ld4==='string'?ld4:JSON.stringify(ld4);
+            localStorage.setItem('adventure_lesson_'+quizId,saveStr);
+            console.log('✅ Loaded via getQuizById, size:',saveStr.length);
+          }catch(e){console.warn('parse err:',e.message);}
         }
       }catch(e){console.warn('getQuizById err:',e.message);}
     }

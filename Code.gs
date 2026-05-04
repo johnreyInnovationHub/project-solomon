@@ -1,11 +1,9 @@
 // ════════════════════════════════════════════════
-// PROJECT SOLOMON · Google Apps Script v6
+// PROJECT SOLOMON · Google Apps Script v7
 // Execute as: Me  |  Access: Anyone
 // ════════════════════════════════════════════════
 
 var SS = SpreadsheetApp.getActiveSpreadsheet();
-
-// ══ PASTE YOUR ANTHROPIC API KEY HERE ══
 var ANTHROPIC_API_KEY = 'YOUR_ANTHROPIC_API_KEY_HERE';
 
 function resp(obj) {
@@ -17,6 +15,7 @@ function doGet(e) {
   var p = e.parameter || {};
   return handleAction(p);
 }
+
 function doPost(e) {
   var p = {};
   try { p = JSON.parse(e.postData.contents); } catch(x) { p = e.parameter || {}; }
@@ -27,107 +26,149 @@ function handleAction(p) {
   var result;
   try {
     var a = p.action || '';
-    if      (a === 'getStudent')        result = getStudent(p.email);
-    else if (a === 'getStudents')       result = getAllStudents();
-    else if (a === 'getQuizzes')        result = getQuizzes(p.section);
-    else if (a === 'getQuizById')       result = getQuizById(p.id);
-    else if (a === 'getScores')         result = getAllScores();
-    else if (a === 'getStudentScores')  result = getStudentScores(p.email);
-    else if (a === 'addStudent')        result = addStudent(p);
-    else if (a === 'updateStudent')     result = updateStudent(p);
-    else if (a === 'addQuiz')           result = addQuiz(p);
-    else if (a === 'updateQuiz')        result = updateQuiz(p);
-    else if (a === 'addScore')          result = addScore(p);
-    else if (a === 'fixSheets')         result = fixSheets();
-    else if (a === 'generateAdventure') result = generateAdventure(p);
-    else if (a === 'saveLessonData')    result = saveLessonData(p);
-    else if (a === 'getLessonData')     result = getLessonData(p.quizId);
-    else result = { ok:true, status:'Solomon API v6 Online' };
+    if      (a === 'getStudent')       result = getStudent(p.email);
+    else if (a === 'getStudents')      result = getAllStudents();
+    else if (a === 'getQuizzes')       result = getQuizzes(p.section);
+    else if (a === 'getQuizById')      result = getQuizById(p.id);
+    else if (a === 'getScores')        result = getAllScores();
+    else if (a === 'getStudentScores') result = getStudentScores(p.email);
+    else if (a === 'addStudent')       result = addStudent(p);
+    else if (a === 'updateStudent')    result = updateStudent(p);
+    else if (a === 'addQuiz')          result = addQuiz(p);
+    else if (a === 'updateQuiz')       result = updateQuiz(p);
+    else if (a === 'addScore')         result = addScore(p);
+    else if (a === 'fixSheets')        result = fixSheets();
+    else if (a === 'saveLesson')       result = saveLesson(p);
+    else if (a === 'getLesson')        result = getLesson(p.quizId);
+    else if (a === 'addQuizFull')      result = addQuizFull(p);
+    else result = { ok: true, status: 'Solomon API v7 Online' };
   } catch(err) {
-    result = { ok:false, error: err.message + ' | ' + err.stack };
+    result = { ok: false, error: err.message };
   }
   return resp(result);
 }
 
-// ══════════════════════════════
-// AI ADVENTURE GENERATOR
-// Uses Claude API server-side (no CORS issues!)
-// ══════════════════════════════
-function generateAdventure(p) {
-  var apiKey = ANTHROPIC_API_KEY;
-  if (!apiKey || apiKey === 'YOUR_ANTHROPIC_API_KEY_HERE') {
-    return { ok: false, error: 'Anthropic API key not configured in Code.gs' };
+// ══════════════════════════════════════════════
+// LESSON DATA — stored in dedicated LessonData sheet
+// ══════════════════════════════════════════════
+
+function getLessonSheet() {
+  var sh = SS.getSheetByName('LessonData');
+  if (!sh) {
+    sh = SS.insertSheet('LessonData');
+    sh.appendRow(['quizId', 'lessonData', 'savedAt']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function saveLesson(p) {
+  var quizId = String(p.quizId || '').trim();
+  var lessonData = p.lessonData || '';
+  var chunk = p.chunk !== undefined ? parseInt(p.chunk) : -1;
+  var totalChunks = p.totalChunks !== undefined ? parseInt(p.totalChunks) : 1;
+
+  if (!quizId) return { ok: false, error: 'quizId required' };
+  if (!lessonData) return { ok: false, error: 'lessonData empty' };
+
+  var sh = getLessonSheet();
+  var vals = sh.getDataRange().getValues();
+
+  if (chunk === -1 || totalChunks === 1) {
+    // Single chunk — save directly
+    for (var i = 1; i < vals.length; i++) {
+      if (String(vals[i][0]).trim() === quizId) {
+        sh.getRange(i + 1, 2).setValue(lessonData);
+        sh.getRange(i + 1, 3).setValue(new Date().toISOString());
+        return { ok: true, updated: true };
+      }
+    }
+    sh.appendRow([quizId, lessonData, new Date().toISOString()]);
+    return { ok: true, inserted: true };
   }
 
-  var pdfBase64 = p.pdfBase64 || '';
-  var title = p.title || 'Lesson';
-  var subject = p.subject || '';
-
-  if (!pdfBase64) {
-    return { ok: false, error: 'No PDF data provided' };
+  // Multi-chunk: save to a temp column, assemble when all chunks arrive
+  // Use a ChunkCache sheet to store chunks temporarily
+  var cacheSheet = SS.getSheetByName('ChunkCache');
+  if (!cacheSheet) {
+    cacheSheet = SS.insertSheet('ChunkCache');
+    cacheSheet.appendRow(['key', 'data', 'ts']);
+    cacheSheet.setFrozenRows(1);
   }
 
-  var prompt = 'You are an educational game designer. Read this lesson PDF and convert it into an interactive adventure lesson for a gamified learning app called Project Solomon (Adventure Time themed).\n\nGenerate a JSON object with this EXACT structure (no markdown, just raw JSON):\n{\n  "title": "lesson title",\n  "subject": "subject area",\n  "scenes": [\n    {\n      "type": "chapter",\n      "icon": "relevant emoji",\n      "chapterNum": 1,\n      "title": "chapter title",\n      "subtitle": "engaging subtitle"\n    },\n    {\n      "type": "dialogue",\n      "character": "finn|jake|bmo",\n      "text": "character says something engaging about the topic, using <em>highlighted terms</em> and <strong>important points</strong>"\n    },\n    {\n      "type": "content",\n      "title": "section title with emoji",\n      "body": "explanation text",\n      "formula": "optional formula or key equation (empty string if none)"\n    },\n    {\n      "type": "two_col",\n      "leftTitle": "left column title",\n      "leftColor": "exo|endo|blue|purple",\n      "leftItems": ["bullet 1","bullet 2","bullet 3"],\n      "leftFormula": "optional formula",\n      "rightTitle": "right column title",\n      "rightColor": "exo|endo|blue|purple",\n      "rightItems": ["bullet 1","bullet 2","bullet 3"],\n      "rightFormula": "optional formula"\n    },\n    {\n      "type": "highlight",\n      "style": "cyan|gold|green",\n      "icon": "emoji",\n      "label": "label text",\n      "body": "highlight content"\n    },\n    {\n      "type": "checkpoint",\n      "cpNum": 1,\n      "title": "Checkpoint Title",\n      "questions": [\n        {\n          "q": "question text",\n          "options": ["option A","option B","option C","option D"],\n          "correct": 0,\n          "feedback_right": "why correct answer is right",\n          "feedback_wrong": "explanation of correct answer"\n        }\n      ]\n    }\n  ]\n}\n\nRules:\n- Create 6-10 scenes total mixing chapters, dialogues, content, and at least 2 checkpoints\n- Each checkpoint should have 3-4 questions based on the actual lesson content\n- Characters: Finn (sword emoji, enthusiastic student), Jake (dog emoji, wise explainer), BMO (game emoji, gives tips/mnemonics)\n- Make dialogues engaging and educational, referencing actual content from the PDF\n- For two_col: use "exo" for red/warm styling, "endo" for blue/cool styling\n- Questions must be based on the ACTUAL content in this PDF\n- Keep all text educational but fun\n- Return ONLY the JSON object, no other text';
+  // Save this chunk with key = quizId_chunkN
+  var chunkKey = quizId + '_chunk' + chunk;
+  var cacheVals = cacheSheet.getDataRange().getValues();
+  var found = false;
+  for (var ci = 1; ci < cacheVals.length; ci++) {
+    if (String(cacheVals[ci][0]) === chunkKey) {
+      cacheSheet.getRange(ci + 1, 2).setValue(lessonData);
+      found = true; break;
+    }
+  }
+  if (!found) cacheSheet.appendRow([chunkKey, lessonData, new Date().toISOString()]);
 
-  var payload = {
-    model: 'claude-opus-4-6',
-    max_tokens: 8000,
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'document',
-          source: {
-            type: 'base64',
-            media_type: 'application/pdf',
-            data: pdfBase64
-          }
-        },
-        {
-          type: 'text',
-          text: prompt
+  // Check if all chunks are present
+  var assembled = '';
+  var allPresent = true;
+  cacheVals = cacheSheet.getDataRange().getValues(); // refresh
+  for (var n = 0; n < totalChunks; n++) {
+    var key = quizId + '_chunk' + n;
+    var found2 = false;
+    for (var ci2 = 1; ci2 < cacheVals.length; ci2++) {
+      if (String(cacheVals[ci2][0]) === key) {
+        assembled += String(cacheVals[ci2][1]);
+        found2 = true; break;
+      }
+    }
+    if (!found2) { allPresent = false; break; }
+  }
+
+  if (allPresent) {
+    // All chunks received — save assembled lesson
+    var shVals = sh.getDataRange().getValues();
+    var existsRow = -1;
+    for (var si = 1; si < shVals.length; si++) {
+      if (String(shVals[si][0]).trim() === quizId) { existsRow = si + 1; break; }
+    }
+    if (existsRow > 0) {
+      sh.getRange(existsRow, 2).setValue(assembled);
+      sh.getRange(existsRow, 3).setValue(new Date().toISOString());
+    } else {
+      sh.appendRow([quizId, assembled, new Date().toISOString()]);
+    }
+    // Clean up chunk cache
+    for (var n2 = 0; n2 < totalChunks; n2++) {
+      var key2 = quizId + '_chunk' + n2;
+      var cacheVals2 = cacheSheet.getDataRange().getValues();
+      for (var ci3 = 1; ci3 < cacheVals2.length; ci3++) {
+        if (String(cacheVals2[ci3][0]) === key2) {
+          cacheSheet.deleteRow(ci3 + 1); break;
         }
-      ]
-    }]
-  };
+      }
+    }
+    return { ok: true, assembled: true, size: assembled.length };
+  }
 
-  var options = {
-    method: 'post',
-    contentType: 'application/json',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
+  return { ok: true, chunk_saved: chunk, waiting_for_more: true };
+}
 
+function getLesson(quizId) {
+  quizId = String(quizId || '').trim();
+  if (!quizId) return { ok: false, error: 'quizId required' };
+  
   try {
-    var response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', options);
-    var code = response.getResponseCode();
-    var text = response.getContentText();
-    var data = JSON.parse(text);
-
-    if (code !== 200) {
-      return { ok: false, error: 'Claude API error: ' + (data.error ? data.error.message : text.substring(0, 200)) };
+    var sh = getLessonSheet();
+    var vals = sh.getDataRange().getValues();
+    for (var i = 1; i < vals.length; i++) {
+      if (String(vals[i][0]).trim() === quizId) {
+        var ld = String(vals[i][1] || '');
+        if (ld.length > 5) return { ok: true, lessonData: ld };
+      }
     }
-
-    // Extract the text content
-    var content = data.content && data.content[0] && data.content[0].text ? data.content[0].text : '';
-    
-    // Parse JSON from response
-    var lessonData;
-    try {
-      var cleaned = content.replace(/```json|```/g, '').trim();
-      lessonData = JSON.parse(cleaned);
-    } catch(e) {
-      return { ok: false, error: 'Could not parse AI response: ' + e.message };
-    }
-
-    return { ok: true, lessonData: lessonData };
-
-  } catch(err) {
-    return { ok: false, error: 'Network error: ' + err.message };
+    return { ok: false, error: 'not_found' };
+  } catch(e) {
+    return { ok: false, error: e.message };
   }
 }
 
@@ -136,36 +177,18 @@ function generateAdventure(p) {
 // ══════════════════════════════
 function getSheetData(sheetName) {
   var sh = SS.getSheetByName(sheetName);
-  if (!sh || sh.getLastRow() < 1) return { sh:sh, headers:[], rows:[] };
+  if (!sh || sh.getLastRow() < 1) return { sh: sh, headers: [], rows: [] };
   var all = sh.getDataRange().getValues();
-  var headers = all[0].map(function(h){ return String(h).trim().toLowerCase(); });
+  var headers = all[0].map(function(h) { return String(h).trim().toLowerCase(); });
   var rows = all.slice(1);
-  return { sh:sh, headers:headers, rows:rows };
+  return { sh: sh, headers: headers, rows: rows };
 }
-
 function col(headers, name) { return headers.indexOf(name.toLowerCase()); }
-
-function getCell(row, headers, name) {
-  var i = col(headers, name);
-  return i >= 0 ? row[i] : '';
-}
+function getCell(row, headers, name) { var i = col(headers, name); return i >= 0 ? row[i] : ''; }
 
 // ══════════════════════════════
 // STUDENTS
 // ══════════════════════════════
-function ensureStudentHeaders(sh) {
-  var headers = ['email','name','section','avatar','status','xp','lootBags','createdAt'];
-  var firstRow = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), headers.length)).getValues()[0];
-  var firstCell = String(firstRow[0]||'').toLowerCase().trim();
-  if (firstCell !== 'email') {
-    if (firstCell.indexOf('@') >= 0 || firstCell === 'id' || firstCell === '') {
-      sh.insertRowBefore(1);
-    }
-    sh.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sh.setFrozenRows(1);
-  }
-}
-
 function getStudentSheet() {
   var sh = SS.getSheetByName('Students');
   if (!sh) {
@@ -174,21 +197,31 @@ function getStudentSheet() {
     sh.setFrozenRows(1);
     return sh;
   }
-  ensureStudentHeaders(sh);
+  // Fix header if needed
+  if (sh.getLastRow() >= 1) {
+    var first = String(sh.getRange(1,1).getValue()||'').toLowerCase().trim();
+    if (first !== 'email') {
+      if (first === 'id') sh.deleteColumn(1);
+      sh.insertRowBefore(1);
+      sh.getRange(1,1,1,8).setValues([['email','name','section','avatar','status','xp','lootBags','createdAt']]);
+      sh.setFrozenRows(1);
+    }
+  }
   return sh;
 }
 
 function addStudent(d) {
   var sh = getStudentSheet();
-  var data = getSheetData('Students');
   var email = String(d.email||'').toLowerCase().trim();
-  if (!email) return { ok:false, error:'email_required' };
+  if (!email) return { ok: false, error: 'email_required' };
+  var data = getSheetData('Students');
   for (var i = 0; i < data.rows.length; i++) {
-    var rowEmail = String(getCell(data.rows[i], data.headers, 'email')||'').toLowerCase().trim();
-    if (rowEmail === email) return { ok:false, error:'duplicate' };
+    if (String(getCell(data.rows[i], data.headers, 'email')||'').toLowerCase().trim() === email)
+      return { ok: false, error: 'duplicate' };
   }
-  sh.appendRow([email, String(d.name||''), String(d.section||''), String(d.avatar||''), 'pending', 0, 0, String(d.createdAt || new Date().toISOString())]);
-  return { ok:true };
+  sh.appendRow([email, String(d.name||''), String(d.section||''), String(d.avatar||''),
+    'pending', 0, 0, String(d.createdAt||new Date().toISOString())]);
+  return { ok: true };
 }
 
 function updateStudent(d) {
@@ -196,19 +229,16 @@ function updateStudent(d) {
   var data = getSheetData('Students');
   var email = String(d.email||'').toLowerCase().trim();
   for (var i = 0; i < data.rows.length; i++) {
-    var rowEmail = String(getCell(data.rows[i], data.headers, 'email')||'').toLowerCase().trim();
-    if (rowEmail === email) {
-      var rowNum = i + 2;
-      var sc = col(data.headers, 'status');
-      var xc = col(data.headers, 'xp');
-      var lc = col(data.headers, 'lootbags');
-      if (d.status    !== undefined && sc >= 0) sh.getRange(rowNum, sc+1).setValue(String(d.status));
-      if (d.xp        !== undefined && xc >= 0) sh.getRange(rowNum, xc+1).setValue(Number(d.xp)||0);
-      if (d.lootBags  !== undefined && lc >= 0) sh.getRange(rowNum, lc+1).setValue(Number(d.lootBags)||0);
-      return { ok:true };
+    if (String(getCell(data.rows[i], data.headers, 'email')||'').toLowerCase().trim() === email) {
+      var r = i + 2;
+      var sc = col(data.headers,'status'), xc = col(data.headers,'xp'), lc = col(data.headers,'lootbags');
+      if (d.status !== undefined && sc >= 0) sh.getRange(r, sc+1).setValue(String(d.status));
+      if (d.xp !== undefined && xc >= 0) sh.getRange(r, xc+1).setValue(Number(d.xp)||0);
+      if (d.lootBags !== undefined && lc >= 0) sh.getRange(r, lc+1).setValue(Number(d.lootBags)||0);
+      return { ok: true };
     }
   }
-  return { ok:false, error:'not_found' };
+  return { ok: false, error: 'not_found' };
 }
 
 function getStudent(email) {
@@ -216,10 +246,10 @@ function getStudent(email) {
   var data = getSheetData('Students');
   email = String(email||'').toLowerCase().trim();
   for (var i = 0; i < data.rows.length; i++) {
-    var rowEmail = String(getCell(data.rows[i], data.headers, 'email')||'').toLowerCase().trim();
-    if (rowEmail === email) return { ok:true, student: buildStudent(data.rows[i], data.headers) };
+    if (String(getCell(data.rows[i], data.headers, 'email')||'').toLowerCase().trim() === email)
+      return { ok: true, student: buildStudent(data.rows[i], data.headers) };
   }
-  return { ok:false, error:'not_found' };
+  return { ok: false, error: 'not_found' };
 }
 
 function getAllStudents() {
@@ -230,7 +260,7 @@ function getAllStudents() {
     var e = String(getCell(data.rows[i], data.headers, 'email')||'').trim();
     if (e && e.toLowerCase() !== 'email') out.push(buildStudent(data.rows[i], data.headers));
   }
-  return { ok:true, students:out };
+  return { ok: true, students: out };
 }
 
 function buildStudent(row, headers) {
@@ -253,11 +283,6 @@ function getQuizSheet() {
   var sh = SS.getSheetByName('Quizzes');
   if (!sh) {
     sh = SS.insertSheet('Quizzes');
-    sh.appendRow(['id','title','subject','time','sections','locked','category','questions','createdAt']);
-    sh.setFrozenRows(1);
-    return sh;
-  }
-  if (sh.getLastRow() < 1) {
     sh.appendRow(['id','title','subject','time','sections','locked','category','questions','createdAt']);
     sh.setFrozenRows(1);
   }
@@ -295,25 +320,36 @@ function addQuiz(d) {
   var data = getSheetData('Quizzes');
   var id = String(d.id || Date.now());
   for (var i = 0; i < data.rows.length; i++) {
-    if (String(getCell(data.rows[i], data.headers, 'id')) === id) return { ok:false, error:'duplicate' };
+    if (String(getCell(data.rows[i], data.headers, 'id')) === id) return { ok: false, error: 'duplicate' };
   }
   var questionsJson = String(d.questions||'[]');
   saveQuestions(id, questionsJson);
-  // Also save lessonData if present (for AI-generated adventures)
-  if (d.lessonData) {
-    getLessonDataSheet();
-    var ldData = getSheetData('LessonData');
-    var ldSh = SS.getSheetByName('LessonData');
-    ldSh.appendRow([id, String(d.lessonData)]);
-  }
-  sh.appendRow([id, String(d.title||''), String(d.subject||''), Number(d.time)||15, String(d.sections||''), false, String(d.category||'practice'), 'stored_in_QData', String(d.createdAt||new Date().toISOString())]);
-  return { ok:true };
+  sh.appendRow([id, String(d.title||''), String(d.subject||''), Number(d.time)||15,
+    String(d.sections||''), false, String(d.category||'practice'),
+    'stored_in_QData', String(d.createdAt||new Date().toISOString())]);
+  return { ok: true };
 }
 
-function getLessonDataSheet() {
-  var sh = SS.getSheetByName('LessonData');
-  if (!sh) { sh = SS.insertSheet('LessonData'); sh.appendRow(['quizId','lessonData']); sh.setFrozenRows(1); }
-  return sh;
+function addQuizFull(d) {
+  // Like addQuiz but saves the full questions JSON (including embedded lessonData)
+  var sh = getQuizSheet();
+  var data = getSheetData('Quizzes');
+  var id = String(d.id || Date.now());
+  // Update if exists, insert if not
+  for (var i = 0; i < data.rows.length; i++) {
+    if (String(getCell(data.rows[i], data.headers, 'id')) === id) {
+      // Already exists — just update questions in QData
+      saveQuestions(id, String(d.questions||'[]'));
+      return { ok: true, updated: true };
+    }
+  }
+  // New quiz
+  var questionsJson = String(d.questions||'[]');
+  saveQuestions(id, questionsJson);
+  sh.appendRow([id, String(d.title||''), String(d.subject||''), Number(d.time)||30,
+    String(d.sections||''), false, String(d.category||'adventure'),
+    'stored_in_QData', String(d.createdAt||new Date().toISOString())]);
+  return { ok: true, inserted: true };
 }
 
 function updateQuiz(d) {
@@ -322,12 +358,12 @@ function updateQuiz(d) {
     if (String(getCell(data.rows[i], data.headers, 'id')) === String(d.id)) {
       var r = i+2, sh = data.sh;
       var lc = col(data.headers,'locked'), cc = col(data.headers,'category');
-      if (d.locked   !== undefined && lc >= 0) sh.getRange(r, lc+1).setValue(d.locked);
+      if (d.locked !== undefined && lc >= 0) sh.getRange(r, lc+1).setValue(d.locked);
       if (d.category !== undefined && cc >= 0) sh.getRange(r, cc+1).setValue(d.category);
-      return { ok:true };
+      return { ok: true };
     }
   }
-  return { ok:false, error:'not_found' };
+  return { ok: false, error: 'not_found' };
 }
 
 function getQuizzes(section) {
@@ -341,9 +377,9 @@ function getQuizzes(section) {
     if (locked === true || String(locked).toUpperCase() === 'TRUE') continue;
     var secs = String(getCell(row, data.headers, 'sections')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
     if (section && secs.length && secs.indexOf(section) < 0) continue;
-    out.push(buildQuiz(row, data.headers));
+    out.push(buildQuiz(row, data.headers, false)); // don't include lessonData in list
   }
-  return { ok:true, quizzes:out };
+  return { ok: true, quizzes: out };
 }
 
 function getQuizById(id) {
@@ -351,37 +387,17 @@ function getQuizById(id) {
   var data = getSheetData('Quizzes');
   for (var i = 0; i < data.rows.length; i++) {
     if (String(getCell(data.rows[i], data.headers, 'id')) === String(id))
-      return { ok:true, quiz: buildQuiz(data.rows[i], data.headers) };
+      return { ok: true, quiz: buildQuiz(data.rows[i], data.headers, true) }; // include lessonData
   }
-  return { ok:false, error:'not_found' };
+  return { ok: false, error: 'not_found' };
 }
 
-function buildQuiz(row, headers) {
+function buildQuiz(row, headers, includeLessonData) {
   var id = String(getCell(row, headers, 'id')||'');
-  var questionsJson = loadQuestions(id);
-  if (!questionsJson) {
-    var inlineQ = String(getCell(row, headers, 'questions')||'[]');
-    questionsJson = (inlineQ && inlineQ !== 'stored_in_QData') ? inlineQ : '[]';
-  }
-  // Load lessonData if available (from LessonData sheet)
-  var lessonData = null;
-  try {
-    var ldSh = SS.getSheetByName('LessonData');
-    if (ldSh && ldSh.getLastRow() > 1) {
-      var ldData = getSheetData('LessonData');
-      for (var i = 0; i < ldData.rows.length; i++) {
-        var ldId = String(getCell(ldData.rows[i], ldData.headers, 'quizid')||'').trim();
-        if (ldId === id) {
-          var rawLD = String(getCell(ldData.rows[i], ldData.headers, 'lessondata')||'');
-          lessonData = rawLD.length > 10 ? rawLD : null;
-          break;
-        }
-      }
-    }
-  } catch(e) {}
+  var questionsJson = loadQuestions(id) || '[]';
   var secs = String(getCell(row, headers, 'sections')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
   var locked = getCell(row, headers, 'locked');
-  return {
+  var quiz = {
     id:        id,
     title:     String(getCell(row, headers, 'title')||''),
     subject:   String(getCell(row, headers, 'subject')||''),
@@ -390,9 +406,23 @@ function buildQuiz(row, headers) {
     locked:    locked === true || String(locked).toUpperCase() === 'TRUE',
     category:  String(getCell(row, headers, 'category')||'practice'),
     questions: questionsJson,
-    lessonData: lessonData,
     createdAt: String(getCell(row, headers, 'createdat')||'')
   };
+  // Extract lessonData from questions field if it's an adventure lesson
+  if (includeLessonData) {
+    try {
+      var qParsed = JSON.parse(questionsJson);
+      if (Array.isArray(qParsed) && qParsed[0] && qParsed[0].question === '__ADVENTURE_LESSON__') {
+        quiz.lessonData = qParsed[0].lessonData || '';
+      }
+    } catch(e) {}
+    // Also try dedicated LessonData sheet as backup
+    if (!quiz.lessonData) {
+      var ld = getLesson(id);
+      if (ld.ok) quiz.lessonData = ld.lessonData;
+    }
+  }
+  return quiz;
 }
 
 // ══════════════════════════════
@@ -404,11 +434,6 @@ function getScoreSheet() {
     sh = SS.insertSheet('Scores');
     sh.appendRow(['email','name','section','quizId','quizTitle','category','score','total','percent','xp','tabSwitches','timeTaken','createdAt']);
     sh.setFrozenRows(1);
-    return sh;
-  }
-  if (sh.getLastRow() < 1) {
-    sh.appendRow(['email','name','section','quizId','quizTitle','category','score','total','percent','xp','tabSwitches','timeTaken','createdAt']);
-    sh.setFrozenRows(1);
   }
   return sh;
 }
@@ -417,14 +442,16 @@ function addScore(d) {
   var sh = getScoreSheet();
   var score = Number(d.score)||0, total = Number(d.total)||1;
   var pct = Math.round((score/total)*100), xp = Math.round((score/total)*50);
-  sh.appendRow([String(d.email||'').toLowerCase(), String(d.name||''), String(d.section||''), String(d.quizId||''), String(d.quizTitle||''), String(d.category||'practice'), score, total, pct, xp, Number(d.tabSwitches)||0, String(d.timeTaken||''), String(d.createdAt||new Date().toISOString())]);
+  sh.appendRow([String(d.email||'').toLowerCase(), String(d.name||''), String(d.section||''),
+    String(d.quizId||''), String(d.quizTitle||''), String(d.category||'practice'),
+    score, total, pct, xp, Number(d.tabSwitches)||0, String(d.timeTaken||''),
+    String(d.createdAt||new Date().toISOString())]);
   try {
     var s = getStudent(d.email);
-    if (s.ok && s.student) {
+    if (s.ok && s.student)
       updateStudent({ email:d.email, xp:(s.student.xp||0)+xp, lootBags:(s.student.lootBags||0)+(score===total?1:0) });
-    }
   } catch(e) {}
-  return { ok:true };
+  return { ok: true };
 }
 
 function getAllScores() {
@@ -434,7 +461,7 @@ function getAllScores() {
   for (var i = 0; i < data.rows.length; i++) {
     if (getCell(data.rows[i], data.headers, 'email')) out.push(buildScore(data.rows[i], data.headers));
   }
-  return { ok:true, scores:out };
+  return { ok: true, scores: out };
 }
 
 function getStudentScores(email) {
@@ -446,7 +473,7 @@ function getStudentScores(email) {
     if (String(getCell(data.rows[i], data.headers, 'email')||'').toLowerCase() === email)
       out.push(buildScore(data.rows[i], data.headers));
   }
-  return { ok:true, scores:out };
+  return { ok: true, scores: out };
 }
 
 function buildScore(row, headers) {
@@ -459,85 +486,10 @@ function buildScore(row, headers) {
     category:    String(getCell(row, headers, 'category')||'practice'),
     score:       Number(getCell(row, headers, 'score'))||0,
     total:       Number(getCell(row, headers, 'total'))||0,
-    percent:     Number(getCell(row, headers, 'percent'))||0,
     xp:          Number(getCell(row, headers, 'xp'))||0,
     tabSwitches: Number(getCell(row, headers, 'tabswitches'))||0,
-    timeTaken:   String(getCell(row, headers, 'timetaken')||''),
     createdAt:   String(getCell(row, headers, 'createdat')||'')
   };
-}
-
-// ══════════════════════════════
-// GET LESSON DATA
-// ══════════════════════════════
-function getLessonData(quizId) {
-  quizId = String(quizId || '').trim();
-  if (!quizId) return { ok: false, error: 'quizId required' };
-  try {
-    var ldSh = SS.getSheetByName('LessonData');
-    if (!ldSh) return { ok: false, error: 'LessonData sheet not found' };
-    var ldData = getSheetData('LessonData');
-    for (var i = 0; i < ldData.rows.length; i++) {
-      var rowId = String(getCell(ldData.rows[i], ldData.headers, 'quizid') || '').trim();
-      if (rowId === quizId) {
-        var ld = String(getCell(ldData.rows[i], ldData.headers, 'lessondata') || '');
-        if (ld.length > 10) return { ok: true, lessonData: ld };
-      }
-    }
-    return { ok: false, error: 'not_found' };
-  } catch(e) {
-    return { ok: false, error: e.message };
-  }
-}
-
-// ══════════════════════════════
-// SAVE LESSON DATA
-// Saves adventure lesson JSON to LessonData sheet
-// Called via GET (metadata) then POST (lessonData)
-// ══════════════════════════════
-function saveLessonData(p) {
-  var quizId = String(p.quizId || '');
-  if (!quizId) return { ok: false, error: 'quizId required' };
-
-  // If lessonData is provided (POST call), save it
-  if (p.lessonData) {
-    var ldSh = getLessonDataSheet();
-    var ldData = getSheetData('LessonData');
-    // Check if row already exists
-    for (var i = 0; i < ldData.rows.length; i++) {
-      if (String(getCell(ldData.rows[i], ldData.headers, 'quizid')) === quizId) {
-        // Update existing
-        ldSh.getRange(i + 2, 2).setValue(String(p.lessonData));
-        return { ok: true, updated: true };
-      }
-    }
-    // Insert new
-    ldSh.appendRow([quizId, String(p.lessonData)]);
-    return { ok: true, inserted: true };
-  }
-
-  // GET call — save quiz metadata to Quizzes sheet and confirm
-  var qSh = getQuizSheet();
-  var qData = getSheetData('Quizzes');
-  // Check if quiz already exists
-  for (var i = 0; i < qData.rows.length; i++) {
-    if (String(getCell(qData.rows[i], qData.headers, 'id')) === quizId) {
-      return { ok: true, exists: true };
-    }
-  }
-  // Add to Quizzes sheet
-  qSh.appendRow([
-    quizId,
-    String(p.title || ''),
-    String(p.subject || ''),
-    30,
-    String(p.sections || ''),
-    false,
-    'adventure',
-    'stored_in_LessonData',
-    String(p.createdAt || new Date().toISOString())
-  ]);
-  return { ok: true, created: true };
 }
 
 // ══════════════════════════════
@@ -546,8 +498,8 @@ function saveLessonData(p) {
 function fixSheets() {
   var stuSh = SS.getSheetByName('Students');
   if (stuSh && stuSh.getLastRow() >= 1) {
-    var firstCell = String(stuSh.getRange(1,1).getValue()||'').toLowerCase().trim();
-    if (firstCell === 'id') stuSh.deleteColumn(1);
+    var first = String(stuSh.getRange(1,1).getValue()||'').toLowerCase().trim();
+    if (first === 'id') stuSh.deleteColumn(1);
     var h1 = String(stuSh.getRange(1,1).getValue()||'').toLowerCase().trim();
     if (h1 !== 'email') {
       stuSh.insertRowBefore(1);
@@ -555,9 +507,6 @@ function fixSheets() {
       stuSh.setFrozenRows(1);
     }
   }
-  getQuizSheet();
-  getScoreSheet();
-  getQDataSheet();
-  getLessonDataSheet();
-  return { ok:true, message:'All sheets fixed and ready.' };
+  getQuizSheet(); getScoreSheet(); getQDataSheet(); getLessonSheet();
+  return { ok: true, message: 'All sheets ready including LessonData.' };
 }

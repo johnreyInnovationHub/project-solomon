@@ -1455,49 +1455,30 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
       const sections = [...document.getElementById('adv-sections').selectedOptions].map(o=>o.value);
 
       const btn = document.getElementById('deploy-adv-btn');
-      btn.textContent = '⏳ Saving to cloud...'; btn.disabled = true;
+      btn.textContent = '⏳ Saving...'; btn.disabled = true;
 
       parsedLessonData.title = title;
       parsedLessonData.subject = subject;
       const lessonJSON = JSON.stringify(parsedLessonData);
       const quizId = String(Date.now());
 
-      // 1. Save lesson data to Sheets via confirmed GET (avoids no-cors silent drop)
-      const apiUrl = getApiUrl();
-      let cloudSaved = false;
-      if (apiUrl) {
-        try {
-          // Use fetch with CORS (GET with params) to confirm the save
-          const saveUrl = apiUrl + '?action=saveLessonData&quizId=' + quizId +
-            '&title=' + encodeURIComponent(title) +
-            '&subject=' + encodeURIComponent(subject) +
-            '&sections=' + encodeURIComponent(sections.join(',')) +
-            '&createdAt=' + encodeURIComponent(new Date().toISOString());
+      // STRATEGY: Embed the ENTIRE lesson JSON inside the questions field.
+      // The questions column is already proven to work for saving/loading.
+      // We wrap the lesson as a special first "question" with the full lesson as a property.
+      // This is stored in QData sheet via the existing working pipeline.
+      const questionsWithLesson = JSON.stringify([{
+        question: '__ADVENTURE_LESSON__',
+        lessonData: lessonJSON,
+        options: ['Begin Adventure'],
+        correct: 0
+      }]);
 
-          // POST the large lessonData separately via no-cors (it will be big)
-          // First save quiz metadata via GET (small, confirmed)
-          const metaRes = await fetch(saveUrl, { redirect: 'follow' });
-          const metaJson = await metaRes.json();
-          if (metaJson.ok) {
-            // Now save the lessonData via POST (large payload)
-            await fetch(apiUrl, {
-              method: 'POST', mode: 'no-cors', redirect: 'follow',
-              body: JSON.stringify({ action: 'saveLessonData', quizId, lessonData: lessonJSON })
-            });
-            cloudSaved = true;
-          }
-        } catch(e) {
-          console.warn('Cloud save failed:', e.message);
-        }
-      }
-
-      // 2. Always save to localStorage as fallback (works on same device)
+      // Save to localStorage
       const quizRecord = {
         id: quizId, title, subject, time: 30, sections,
         category: 'adventure',
-        questions: [{question:'HTML_LESSON',options:['Start'],correct:0}],
+        questions: questionsWithLesson,
         locked: false, lessonType: 'html',
-        lessonData: lessonJSON,
         createdAt: new Date().toISOString()
       };
       const quizzes = JSON.parse(localStorage.getItem('s_quizzes')||'[]');
@@ -1505,19 +1486,31 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
       localStorage.setItem('s_quizzes', JSON.stringify(quizzes));
       localStorage.setItem('adventure_lesson_' + quizId, lessonJSON);
 
-      // 3. Also save via no-cors POST for Sheets backup
-      sheetsPost('addQuiz', {
-        id: quizId, title, subject, time: '30',
-        sections: sections.join(','), locked: 'false',
-        category: 'adventure',
-        questions: JSON.stringify([{question:'HTML_LESSON',options:['Start'],correct:0}]),
-        lessonData: lessonJSON,
-        createdAt: new Date().toISOString()
-      });
+      // Save to Sheets using no-cors POST
+      // The questions field (containing lessonData) goes through the QData sheet
+      const apiUrl = getApiUrl();
+      if (apiUrl) {
+        btn.textContent = '☁️ Uploading to Sheets...';
+        try {
+          await fetch(apiUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            redirect: 'follow',
+            body: JSON.stringify({
+              action: 'addQuizFull',
+              id: quizId, title, subject, time: 30,
+              sections: sections.join(','),
+              locked: false, category: 'adventure',
+              questions: questionsWithLesson,
+              createdAt: new Date().toISOString()
+            })
+          });
+          console.log('Lesson uploaded to Sheets (no-cors)');
+        } catch(e) { console.warn('Upload err:', e.message); }
+      }
 
       btn.textContent = '🗺️ Deploy Adventure!'; btn.disabled = false;
-      const saveMsg = cloudSaved ? 'Saved to cloud ✓' : 'Saved locally (students on same device can access)';
-      showToast(`🗺️ "${title}" deployed! ${parsedLessonData.scenes.length} scenes ready! ${saveMsg}`, 'success');
+      showToast(`🗺️ "${title}" deployed! ${parsedLessonData.scenes.length} scenes ready! 🌟`, 'success');
       clearAdvHTML();
       document.getElementById('adv-title').value = '';
       document.getElementById('adv-subject').value = '';
