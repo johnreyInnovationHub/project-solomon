@@ -239,7 +239,7 @@ async function init(){
   }
 
   if(!data){
-    // Try to get from all local quizzes and find lessonData
+    // Try local quizzes
     try{
       const quizzes=JSON.parse(localStorage.getItem('s_quizzes')||'[]');
       const q=quizzes.find(q=>String(q.id)===String(quizId));
@@ -247,21 +247,35 @@ async function init(){
     }catch(e){}
   }
 
-  // If still no data — generate via Claude API (student-side fallback using quiz info)
+  // Try fetching from Google Sheets (lessonData stored server-side)
+  if(!data && quizId){
+    document.getElementById('ls1').textContent='☁️ Loading lesson from cloud...';
+    try{
+      const HARDCODED_API_URL='https://script.google.com/macros/s/AKfycbxjrl_Uq_wO4MsjB6f_v9MOQ13FrFccQxDsykZO-N5CGG7jm7oCMCqmY6roNytUZngn/exec';
+      const apiUrl=localStorage.getItem('solomon_api_url')||HARDCODED_API_URL;
+      const qs=new URLSearchParams({action:'getQuizById',id:String(quizId)}).toString();
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),15000);
+      const res=await fetch(`${apiUrl}?${qs}`,{redirect:'follow',signal:controller.signal});
+      clearTimeout(timer);
+      const json=await res.json();
+      if(json.ok&&json.quiz&&json.quiz.lessonData){
+        try{data=JSON.parse(json.quiz.lessonData);}catch(e){}
+        // Cache it
+        if(data) localStorage.setItem('adventure_lesson_'+quizId,JSON.stringify(data));
+      }
+    }catch(e){console.log('Cloud fetch failed:',e);}
+  }
+
   if(!data){
-    // Show fallback message  
-    document.getElementById('ls1').textContent='🔍 Loading lesson from cloud...';
-    // Wait then show a "content not found" message
     clearInterval(iv);
-    setTimeout(()=>{
-      document.getElementById('loading-overlay').innerHTML=`
-        <div style="text-align:center;padding:2rem;">
-          <div style="font-size:3rem;margin-bottom:1rem;">😕</div>
-          <p style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:#c9b8e8;margin-bottom:1rem;">Adventure lesson not found.</p>
-          <p style="font-size:.85rem;color:#7a6090;margin-bottom:1.5rem;">Ask your teacher to redeploy this adventure from the Command Tower.</p>
-          <button onclick="window.location.href='student.html'" style="background:linear-gradient(135deg,#00aaff,#0055aa);color:white;border:none;padding:.75rem 2rem;border-radius:50px;font-family:'Fredoka One',cursive;font-size:1rem;cursor:pointer;">← Back to Hero Portal</button>
-        </div>`;
-    },2000);
+    document.getElementById('loading-overlay').innerHTML=`
+      <div style="text-align:center;padding:2rem;">
+        <div style="font-size:3rem;margin-bottom:1rem;">😕</div>
+        <p style="font-family:'Fredoka One',cursive;font-size:1.2rem;color:#c9b8e8;margin-bottom:1rem;">Adventure lesson not found.</p>
+        <p style="font-size:.85rem;color:#7a6090;margin-bottom:1.5rem;">Ask your teacher to redeploy this adventure from the Command Tower.</p>
+        <button onclick="window.location.href='student.html'" style="background:linear-gradient(135deg,#00aaff,#0055aa);color:white;border:none;padding:.75rem 2rem;border-radius:50px;font-family:'Fredoka One',cursive;font-size:1rem;cursor:pointer;">← Back to Hero Portal</button>
+      </div>`;
     return;
   }
 

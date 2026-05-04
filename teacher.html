@@ -1137,94 +1137,14 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
         document.getElementById('ai-gen-title').textContent = 'AI Wizard is reading your lesson...';
 
         // Call Claude API to generate adventure lesson
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 8000,
-            messages: [{
-              role: 'user',
-              content: [
-                {
-                  type: 'document',
-                  source: { type: 'base64', media_type: 'application/pdf', data: base64 }
-                },
-                {
-                  type: 'text',
-                  text: `You are an educational game designer. Read this lesson PDF and convert it into an interactive adventure lesson for a gamified learning app called Project Solomon (Adventure Time themed).
+        // Call Claude via Google Apps Script proxy (free, no CORS issues!)
+        const apiUrl = getApiUrl();
+        if (!apiUrl) throw new Error('Google Sheets API not configured. Check Setup.');
 
-Generate a JSON object with this EXACT structure (no markdown, just raw JSON):
-{
-  "title": "lesson title",
-  "subject": "subject area",
-  "scenes": [
-    {
-      "type": "chapter",
-      "icon": "relevant emoji",
-      "chapterNum": 1,
-      "title": "chapter title",
-      "subtitle": "engaging subtitle"
-    },
-    {
-      "type": "dialogue",
-      "character": "finn|jake|bmo",
-      "text": "character says something engaging about the topic, using <em>highlighted terms</em> and <strong>important points</strong>"
-    },
-    {
-      "type": "content",
-      "title": "section title with emoji",
-      "body": "explanation text",
-      "formula": "optional formula or key equation (empty string if none)"
-    },
-    {
-      "type": "two_col",
-      "leftTitle": "left column title",
-      "leftColor": "exo|endo|blue|purple",
-      "leftItems": ["bullet 1","bullet 2","bullet 3"],
-      "leftFormula": "optional formula",
-      "rightTitle": "right column title",
-      "rightColor": "exo|endo|blue|purple",
-      "rightItems": ["bullet 1","bullet 2","bullet 3"],
-      "rightFormula": "optional formula"
-    },
-    {
-      "type": "highlight",
-      "style": "cyan|gold|green",
-      "icon": "emoji",
-      "label": "label text",
-      "body": "highlight content"
-    },
-    {
-      "type": "checkpoint",
-      "cpNum": 1,
-      "title": "Checkpoint Title",
-      "questions": [
-        {
-          "q": "question text",
-          "options": ["option A","option B","option C","option D"],
-          "correct": 0,
-          "feedback_right": "why correct answer is right",
-          "feedback_wrong": "explanation of correct answer"
-        }
-      ]
-    }
-  ]
-}
-
-Rules:
-- Create 6-10 scenes total mixing chapters, dialogues, content, and at least 2 checkpoints
-- Each checkpoint should have 3-4 questions based on the actual lesson content
-- Characters: Finn (⚔️, enthusiastic student), Jake (🐶, wise explainer), BMO (🎮, gives tips/mnemonics)
-- Make dialogues engaging and educational, referencing actual content from the PDF
-- For two_col: use "exo" for red/warm styling, "endo" for blue/cool styling
-- Questions must be based on the ACTUAL content in this PDF
-- Keep all text educational but fun
-- Return ONLY the JSON object, no other text`
-                }
-              ]
-            }]
-          })
+        const response = await sheetsGet('generateAdventure', {
+          pdfBase64: base64,
+          title: title,
+          subject: subject
         });
 
         clearInterval(barInterval);
@@ -1232,19 +1152,10 @@ Rules:
         document.getElementById('ai-gen-msg').textContent = '💾 Saving your adventure...';
         document.getElementById('ai-gen-title').textContent = 'Almost done!';
 
-        if (!response.ok) throw new Error('API error: ' + response.status);
+        if (!response.ok) throw new Error(response.error || 'AI generation failed');
 
-        const data = await response.json();
-        const rawText = data.content.map(c => c.text||'').join('');
-        
-        // Parse JSON from response
-        let lessonData;
-        try {
-          const cleaned = rawText.replace(/```json|```/g,'').trim();
-          lessonData = JSON.parse(cleaned);
-        } catch(e) {
-          throw new Error('Could not parse AI response. Try again.');
-        }
+        const lessonData = response.lessonData;
+        if (!lessonData) throw new Error('No lesson data returned from AI');
 
         // Save as adventure quiz with AI-generated content embedded
         const sections = [...document.getElementById('adv-sections').selectedOptions].map(o=>o.value);
