@@ -261,47 +261,45 @@ async function init(){
     }catch(e){}
   }
 
-  // SOURCE 3: Google Sheets — getQuizById (includes lessonData from LessonData tab)
+  // SOURCE 3: getLesson — dedicated endpoint (fastest cloud method)
   if(!data&&quizId){
-    document.getElementById('ls1').textContent='☁️ Fetching from cloud...';
+    document.getElementById('ls1').textContent='☁️ Loading from cloud...';
     document.getElementById('ls2').className='loading-step active';
+    const apiUrl=localStorage.getItem('solomon_api_url')||ADVENTURE_API_URL;
+    
+    // Try getLesson first (dedicated, returns just the lesson data)
     try{
-      const apiUrl=localStorage.getItem('solomon_api_url')||ADVENTURE_API_URL;
-      const url=apiUrl+'?action=getQuizById&id='+encodeURIComponent(quizId);
+      const url=apiUrl+'?action=getLesson&quizId='+encodeURIComponent(quizId);
       const res=await fetchWithTimeout(url,15);
       const json=await res.json();
-      console.log('getQuizById response:',json.ok, json.quiz?.lessonData?.length);
-      if(json.ok&&json.quiz){
-        const ld=json.quiz.lessonData;
-        if(ld&&ld.length>20){
-          try{
-            data=JSON.parse(ld);
-            localStorage.setItem('adventure_lesson_'+quizId,ld);
-            console.log('✅ Loaded from Sheets getQuizById');
-          }catch(e){console.warn('JSON parse failed:',e.message,ld.substring(0,100));}
-        }
-      }
-    }catch(e){console.warn('Sheets fetch failed:',e.message);}
-  }
-
-  // SOURCE 4: Dedicated getLessonData action
-  if(!data&&quizId){
-    document.getElementById('ls2').textContent='☁️ Trying lesson data store...';
-    try{
-      const apiUrl=localStorage.getItem('solomon_api_url')||ADVENTURE_API_URL;
-      const url=apiUrl+'?action=getLessonData&quizId='+encodeURIComponent(quizId);
-      const res=await fetchWithTimeout(url,12);
-      const json=await res.json();
-      if(json.ok&&json.lessonData&&json.lessonData.length>20){
+      console.log('getLesson:',json.ok,'size:',json.lessonData?.length);
+      if(json.ok&&json.lessonData&&json.lessonData.length>10){
         try{
           data=JSON.parse(json.lessonData);
           localStorage.setItem('adventure_lesson_'+quizId,json.lessonData);
-          console.log('✅ Loaded from getLessonData');
-        }catch(e){}
+          console.log('✅ Loaded via getLesson');
+        }catch(e){console.warn('parse err:',e.message);}
       }
-    }catch(e){console.warn('getLessonData failed:',e.message);}
-  }
+    }catch(e){console.warn('getLesson err:',e.message);}
 
+    // Fallback: getQuizById (includes lessonData field)
+    if(!data){
+      document.getElementById('ls3').className='loading-step active';
+      try{
+        const url=apiUrl+'?action=getQuizById&id='+encodeURIComponent(quizId);
+        const res=await fetchWithTimeout(url,15);
+        const json=await res.json();
+        console.log('getQuizById:',json.ok,'lessonData size:',json.quiz?.lessonData?.length);
+        if(json.ok&&json.quiz?.lessonData&&json.quiz.lessonData.length>10){
+          try{
+            data=JSON.parse(json.quiz.lessonData);
+            localStorage.setItem('adventure_lesson_'+quizId,json.quiz.lessonData);
+            console.log('✅ Loaded via getQuizById');
+          }catch(e){}
+        }
+      }catch(e){console.warn('getQuizById err:',e.message);}
+    }
+  }
   clearInterval(iv);
 
   if(!data){
