@@ -893,7 +893,7 @@ function rollLoot(){
 
 /* ─── UTILS ─── */
 function timeAgo(d){const s=(Date.now()-new Date(d))/1000;if(s<60)return'just now';if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;return`${Math.floor(s/86400)}d ago`;}
-function formatDate(d){return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function formatDate(d){if(!d)return 'N/A';const dt=new Date(d);if(isNaN(dt.getTime()))return String(d).substring(0,10)||'N/A';return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
 function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.getElementById(el);if(el)el.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--text-muted);"><div class="spinner"></div><p style="margin-top:1rem;font-size:0.85rem;">${msg}</p></div>`;}
 
 // Background handled by each page inline
@@ -1716,8 +1716,15 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
       _allScores = await getScores();
       const quizSel = document.getElementById('records-quiz-filter');
       const currentQuiz = quizSel.value;
-      const quizNames = [...new Map(_allScores.map(s=>[s.quizId, s.quizTitle])).entries()];
-      quizSel.innerHTML = '<option value="all">All Quests</option>' + quizNames.map(([id,title])=>`<option value="${id}">${title||'Quest #'+id}</option>`).join('');
+      // Build unique quiz list from scores, showing title
+      const quizMap = new Map();
+      _allScores.forEach(s => {
+        if (s.quizId && !quizMap.has(String(s.quizId))) {
+          quizMap.set(String(s.quizId), s.quizTitle || 'Quest #' + s.quizId);
+        }
+      });
+      quizSel.innerHTML = '<option value="all">All Quests</option>' +
+        [...quizMap.entries()].map(([id,title])=>`<option value="${id}">${title}</option>`).join('');
       if (currentQuiz && currentQuiz!=='all') quizSel.value = currentQuiz;
       applyRecordFilters();
     }
@@ -1735,9 +1742,20 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
       const cat    = document.getElementById('records-cat-filter')?.value||'all';
       const sortBy = document.getElementById('records-sort')?.value||'date-desc';
       let scores = _allScores.slice();
-      if (_activeSection!=='all') scores=scores.filter(s=>s.section===_activeSection);
-      if (quizId!=='all') scores=scores.filter(s=>String(s.quizId)===String(quizId));
-      if (cat!=='all') scores=scores.filter(s=>(s.category||'practice')===cat);
+      // Section filter — compare trimmed strings
+      if (_activeSection!=='all') scores=scores.filter(s=>(s.section||'').trim()===_activeSection.trim());
+      // Quiz filter — match by quizId OR quizTitle
+      if (quizId!=='all') scores=scores.filter(s=>String(s.quizId)===String(quizId)||s.quizTitle===quizId);
+      // Category filter
+      if (cat!=='all') {
+        scores=scores.filter(s=>{
+          const c=s.category||'practice';
+          if(cat==='adventure') return c==='adventure'||c==='lesson';
+          if(cat==='practice') return c==='practice'||c==='training';
+          if(cat==='assessment') return c==='assessment'||c==='arena';
+          return c===cat;
+        });
+      }
       if (search) scores=scores.filter(s=>(s.name||'').toLowerCase().includes(search)||(s.quizTitle||'').toLowerCase().includes(search)||(s.email||'').toLowerCase().includes(search));
       scores.sort((a,b)=>{
         if(sortBy==='date-desc') return new Date(b.createdAt)-new Date(a.createdAt);
@@ -1765,8 +1783,8 @@ function showLoading(el,msg='Loading...'){if(typeof el==='string')el=document.ge
         return `<tr>
           <td><div style="font-weight:700;">${s.name||'—'}</div><div style="font-size:0.72rem;color:var(--text-muted);">${s.email||''}</div></td>
           <td><span class="badge badge-gray">${s.section||'—'}</span></td>
-          <td style="max-width:180px;font-size:0.85rem;font-weight:600;">${s.quizTitle||'Quest #'+s.quizId}</td>
-          <td><span class="badge ${cat==='assessment'?'badge-magenta':cat==='adventure'||cat==='lesson'?'badge-cyan':'badge-gold'}" style="font-size:0.65rem;">${catIcon(cat)}</span></td>
+          <td style="max-width:180px;font-size:0.85rem;font-weight:600;">${s.quizTitle||s.quizId||'Quest'}</td>
+          <td><span class="badge ${cat==='assessment'||cat==='arena'?'badge-magenta':cat==='adventure'||cat==='lesson'?'badge-cyan':'badge-gold'}" style="font-size:0.65rem;">${catIcon(cat)}</span></td>
           <td><span class="badge ${color}">${s.score}/${s.total} (${pct}%)</span></td>
           <td style="color:${tabs>0?'#ff6666':'var(--text-muted)'};">${tabs>0?`⚠ ${tabs}`:tabs}</td>
           <td style="font-size:0.82rem;color:var(--text-secondary);">${formatDate(s.createdAt)}</td>

@@ -412,8 +412,9 @@ function advAnswer(i){
   if(opts[i].disabled)return;
   opts.forEach(o=>o.disabled=true);
   const q=quiz.questions[currentQ];
+  const correctIdx=parseInt(q.correct)||0;
   const isAssessment=quiz.category==='assessment';
-  const isCorrect=i===q.correct;
+  const isCorrect=i===correctIdx;
   const fb=document.getElementById('adv-feedback');
   if(isAssessment){
     opts[i].classList.add('selected-assessment');
@@ -421,7 +422,7 @@ function advAnswer(i){
     fb.textContent='✓ Answer recorded.';
   }else{
     opts[i].classList.add(isCorrect?'correct':'wrong');
-    opts[q.correct].classList.add('correct');
+    if(opts[correctIdx]) opts[correctIdx].classList.add('correct');
     if(isCorrect){
       fb.style.cssText='display:block;padding:.75rem 1rem;border-radius:10px;background:rgba(0,212,170,.08);border-left:3px solid #00d4aa;color:#00d4aa;font-weight:700;';
       fb.textContent='✓ Correct! Excellence is a Habit!';
@@ -515,7 +516,6 @@ function flappyAnswer(i){
 
   if(isCorrect){
     score++;streak++;
-    // Give a big flap boost as reward
     birdVel=FLAP_FORCE*2;
     showBirdMsg('✓ CORRECT! +XP 🚀');
     // Add power-up chance
@@ -613,12 +613,13 @@ function renderArenaQuestion(){
 }
 
 function autoArenaAnswer(){
-  // Time's up — count as wrong
+  // Time's up — count as wrong (score not incremented)
   const opts=document.querySelectorAll('.arena-opt');
   opts.forEach(o=>o.disabled=true);
   const q=quiz.questions[currentQ];
-  if(!quiz.category||quiz.category!=='assessment')opts[q.correct].classList.add('correct');
-  answers.push({question:q.question,selected:-1,correct:q.correct,isCorrect:false});
+  const isAssessment=quiz.category==='assessment'||quiz.category==='arena';
+  if(!isAssessment && opts[parseInt(q.correct)]) opts[parseInt(q.correct)].classList.add('correct');
+  answers.push({question:q.question,selected:-1,correct:parseInt(q.correct),isCorrect:false});
   showBuzz("⏰ Time's up!");
   document.getElementById('arena-next-btn').style.display='block';
 }
@@ -628,19 +629,23 @@ function arenaAnswer(i){
   const opts=document.querySelectorAll('.arena-opt');
   opts.forEach(o=>o.disabled=true);
   const q=quiz.questions[currentQ];
-  const isAssessment=quiz.category==='assessment';
-  const isCorrect=i===q.correct;
+  const isAssessment=quiz.category==='assessment'||quiz.category==='arena';
+  const isCorrect=i===parseInt(q.correct);
+
+  // Always count score (teacher needs actual results)
+  if(isCorrect) score++;
 
   if(isAssessment){
+    // Assessment: show selection but hide if correct or wrong
     opts[i].classList.add('selected-assessment');
-    showBuzz('✓ Locked in!');
+    showBuzz('✓ Answer locked in!');
   }else{
     opts[i].classList.add(isCorrect?'correct':'wrong');
-    opts[q.correct].classList.add('correct');
-    if(isCorrect){score++;showBuzz('🎉 CORRECT!');}
-    else{showBuzz(`✗ It was ${String.fromCharCode(65+q.correct)}`);}
+    if(opts[parseInt(q.correct)]) opts[parseInt(q.correct)].classList.add('correct');
+    if(isCorrect){showBuzz('🎉 CORRECT!');}
+    else{showBuzz(`✗ It was ${String.fromCharCode(65+parseInt(q.correct))}`);}
   }
-  answers.push({question:q.question,selected:i,correct:q.correct,isCorrect});
+  answers.push({question:q.question,selected:i,correct:parseInt(q.correct),isCorrect});
   document.getElementById('arena-next-btn').style.display='block';
 }
 
@@ -681,15 +686,33 @@ async function finishQuiz(){
   quizStarted=false;
 
   const total=quiz.questions.length;
-  const pct=Math.round(score/total*100);
-  const xp=Math.round((score/total)*50);
-  const isPerfect=score===total;
+  // Ensure score never exceeds total
+  const finalScore=Math.min(score, total);
+  const pct=total>0?Math.round(finalScore/total*100):0;
+  const xp=Math.round((finalScore/total)*50);
+  const isPerfect=finalScore===total&&total>0;
   const elapsed=(quiz.time||15)*60-secondsLeft;
   const isAssessment=quiz.category==='assessment'||quiz.category==='arena';
+  const nowISO=new Date().toISOString();
 
   if(!isPreview&&student){
-    await saveScore({email:student.email,name:student.name,section:student.section,quizId:quiz.id,quizTitle:quiz.title,category:quiz.category||'practice',score,total,xp,tabSwitches:tabCount,timeTaken:`${Math.floor(elapsed/60)}m ${elapsed%60}s`,createdAt:new Date().toISOString()});
+    await saveScore({
+      email:student.email,
+      name:student.name,
+      section:student.section,
+      quizId:String(quiz.id),
+      quizTitle:quiz.title||'Quest',
+      category:quiz.category||'practice',
+      score:finalScore,
+      total,
+      xp,
+      tabSwitches:tabCount,
+      timeTaken:`${Math.floor(elapsed/60)}m ${elapsed%60}s`,
+      createdAt:nowISO
+    });
   }
+  // Update local variable for display
+  score=finalScore;
 
   // Hide all play screens
   ['adventure-screen','training-screen','arena-screen'].forEach(id=>{
@@ -704,8 +727,8 @@ async function finishQuiz(){
 
   const titles=[[90,'🌌 LEGENDARY!'],[75,'🚀 Quest Complete!'],[50,'✅ Mission Done!'],[0,'💪 Keep Training!']];
   document.getElementById('result-title').textContent=titles.find(([t])=>pct>=t)[1];
-  document.getElementById('result-sub').textContent=isPerfect?'🎁 PERFECT SCORE! You earned a Loot Bag!':`You answered ${score} of ${total} correctly.`;
-  document.getElementById('r-score').textContent=`${score}/${total}`;
+  document.getElementById('result-sub').textContent=isPerfect?'🎁 PERFECT SCORE! You earned a Loot Bag!':`You answered ${finalScore} of ${total} correctly.`;
+  document.getElementById('r-score').textContent=`${finalScore}/${total}`;
   document.getElementById('r-pct').textContent=`${pct}%`;
   document.getElementById('r-xp').textContent=`+${xp}`;
   if(isPerfect)document.getElementById('loot-notice').classList.remove('hidden');

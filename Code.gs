@@ -360,10 +360,19 @@ function addScore(d) {
   var sh = getScoreSheet();
   var score = Number(d.score)||0, total = Number(d.total)||1;
   var pct = Math.round((score/total)*100), xp = Math.round((score/total)*50);
-  sh.appendRow([String(d.email||'').toLowerCase(), String(d.name||''), String(d.section||''),
-    String(d.quizId||''), String(d.quizTitle||''), String(d.category||'practice'),
-    score, total, pct, xp, Number(d.tabSwitches)||0, String(d.timeTaken||''),
-    String(d.createdAt||new Date().toISOString())]);
+  var scoreDate = d.createdAt ? String(d.createdAt) : new Date().toISOString();
+  sh.appendRow([
+    String(d.email||'').toLowerCase(),
+    String(d.name||''),
+    String(d.section||'').trim(),
+    String(d.quizId||''),
+    String(d.quizTitle||''),
+    String(d.category||'practice'),
+    score, total, pct, xp,
+    Number(d.tabSwitches)||0,
+    String(d.timeTaken||''),
+    scoreDate
+  ]);
   try {
     var s = getStudent(d.email);
     if (s.ok && s.student)
@@ -395,18 +404,21 @@ function getStudentScores(email) {
 }
 
 function buildScore(row, headers) {
+  var rawDate = String(getCell(row, headers, 'createdat')||'');
   return {
     email:       String(getCell(row, headers, 'email')||''),
     name:        String(getCell(row, headers, 'name')||''),
-    section:     String(getCell(row, headers, 'section')||''),
+    section:     String(getCell(row, headers, 'section')||'').trim(),
     quizId:      String(getCell(row, headers, 'quizid')||''),
     quizTitle:   String(getCell(row, headers, 'quiztitle')||''),
     category:    String(getCell(row, headers, 'category')||'practice'),
     score:       Number(getCell(row, headers, 'score'))||0,
     total:       Number(getCell(row, headers, 'total'))||0,
+    percent:     Number(getCell(row, headers, 'percent'))||0,
     xp:          Number(getCell(row, headers, 'xp'))||0,
     tabSwitches: Number(getCell(row, headers, 'tabswitches'))||0,
-    createdAt:   String(getCell(row, headers, 'createdat')||'')
+    timeTaken:   String(getCell(row, headers, 'timetaken')||''),
+    createdAt:   rawDate
   };
 }
 
